@@ -149,7 +149,9 @@ def _feature_checks(part: str, reference: np.ndarray, generated: np.ndarray) -> 
                 point_filter=lambda points: (points[:, 0] > 28.0) & (points[:, 1] > 0.0),
             ),
             "top_handle_floor": _compare_horizontal_feature(reference, generated, 1.076608, "+Z"),
-            "text_floor": _compare_horizontal_feature(reference, generated, 2.676608, "+Z"),
+            "text_floor": _compare_horizontal_feature(
+                reference, generated, 2.676608, "+Z", generated_local_z=2.276608
+            ),
             "bottom_click_groove_ceiling": _compare_horizontal_feature(
                 reference, generated, 0.8, "-Z"
             ),
@@ -318,11 +320,17 @@ def _section_bbox(points: np.ndarray) -> dict[str, object]:
 
 
 def _compare_horizontal_feature(
-    reference: np.ndarray, generated: np.ndarray, local_z: float, normal: str
+    reference: np.ndarray,
+    generated: np.ndarray,
+    local_z: float,
+    normal: str,
+    *,
+    generated_local_z: float | None = None,
 ) -> dict[str, object]:
+    generated_z = local_z if generated_local_z is None else generated_local_z
     return {
         "reference": _horizontal_feature(reference, local_z, normal, use_local_z=True),
-        "generated": _horizontal_feature(generated, local_z, normal, use_local_z=True),
+        "generated": _horizontal_feature(generated, generated_z, normal, use_local_z=True),
     }
 
 

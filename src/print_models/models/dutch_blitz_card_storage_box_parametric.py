@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from importlib.resources import files
+from pathlib import Path
 
 NAME = "dutch_blitz_card_storage_box_parametric"
 DESCRIPTION = (
@@ -20,9 +22,15 @@ PARAMETERS = {
     "lid_depth_fit_clearance": 2.089892,
     "lid_thickness": 3.076608,
     "lid_edge_chamfer": 0.8,
-    "logo_size": 24.0,
-    "logo_depth": 0.4,
-    "logo_font": "Arial",
+    "logo_size": 40.66,
+    "logo_width": 63.95,
+    "logo_depth": 0.8,
+    "logo_font": "UnifrakturMaguntia",
+    "side_logo_size": 58.0,
+    "side_logo_width": 95.0,
+    "side_logo_depth": 0.8,
+    "slogan_size": 6.5,
+    "slogan_depth": 0.8,
     "handle_slot": True,
     "handle_slot_depth": 2.0,
     "click_feature": True,
@@ -58,9 +66,15 @@ def build(
     lid_depth_fit_clearance: float = 2.089892,
     lid_thickness: float = 3.076608,
     lid_edge_chamfer: float = 0.8,
-    logo_size: float = 24.0,
-    logo_depth: float = 0.4,
-    logo_font: str = "Arial",
+    logo_size: float = 40.66,
+    logo_width: float = 63.95,
+    logo_depth: float = 0.8,
+    logo_font: str = "UnifrakturMaguntia",
+    side_logo_size: float = 58.0,
+    side_logo_width: float = 95.0,
+    side_logo_depth: float = 0.8,
+    slogan_size: float = 6.5,
+    slogan_depth: float = 0.8,
     handle_slot: bool = True,
     handle_slot_depth: float = 2.0,
     click_feature: bool = True,
@@ -92,6 +106,12 @@ def build(
             divider_pitch=divider_pitch,
             click_feature=click_feature,
             lid_thickness=lid_thickness,
+            logo_font=logo_font,
+            side_logo_size=side_logo_size,
+            side_logo_width=side_logo_width,
+            side_logo_depth=side_logo_depth,
+            slogan_size=slogan_size,
+            slogan_depth=slogan_depth,
         )
 
     if normalized_part in {"all", "lid"}:
@@ -104,6 +124,7 @@ def build(
             lid_thickness=lid_thickness,
             lid_edge_chamfer=lid_edge_chamfer,
             logo_size=logo_size,
+            logo_width=logo_width,
             logo_depth=logo_depth,
             logo_font=logo_font,
             handle_slot=handle_slot,
@@ -135,6 +156,12 @@ def _build_container(
     corner_radius: float,
     click_feature: bool,
     lid_thickness: float,
+    logo_font: str,
+    side_logo_size: float,
+    side_logo_width: float,
+    side_logo_depth: float,
+    slogan_size: float,
+    slogan_depth: float,
     divider_count: int,
     divider_depth: float,
     divider_height: float,
@@ -164,6 +191,28 @@ def _build_container(
                 z_min=bottom_thickness,
                 z_max=divider_height,
             )
+        )
+
+    if side_logo_depth > 0 and side_logo_size > 0:
+        body = _engrave_container_side_logos(
+            cq=cq,
+            body=body,
+            outer_depth=outer_depth,
+            outer_height=outer_height,
+            height=side_logo_size,
+            width=side_logo_width,
+            depth=side_logo_depth,
+            font=logo_font,
+        )
+
+    if slogan_depth > 0 and slogan_size > 0:
+        body = _engrave_container_short_side_slogans(
+            cq=cq,
+            body=body,
+            outer_width=outer_width,
+            outer_height=outer_height,
+            size=slogan_size,
+            depth=slogan_depth,
         )
 
     if click_feature:
@@ -207,6 +256,7 @@ def _build_lid(
     lid_thickness: float,
     lid_edge_chamfer: float,
     logo_size: float,
+    logo_width: float,
     logo_depth: float,
     logo_font: str,
     handle_slot: bool,
@@ -230,6 +280,7 @@ def _build_lid(
             lid_thickness=lid_thickness,
             text="Dutch Blitz",
             size=logo_size,
+            width=logo_width,
             depth=logo_depth,
             font=logo_font,
         )
@@ -409,6 +460,190 @@ def _top_click_features(*, cq, outer_width: float, outer_depth: float, track_z: 
     return track_floor.union(lug)
 
 
+def _engrave_container_side_logos(
+    *,
+    cq,
+    body,
+    outer_depth: float,
+    outer_height: float,
+    height: float,
+    width: float,
+    depth: float,
+    font: str,
+):
+    z_center = outer_height / 2.0
+    front = _side_logo_cutter(
+        cq=cq,
+        y=outer_depth / 2.0,
+        z_center=z_center,
+        height=height,
+        width=width,
+        depth=depth,
+        front=True,
+    )
+    back = _side_logo_cutter(
+        cq=cq,
+        y=-outer_depth / 2.0,
+        z_center=z_center,
+        height=height,
+        width=width,
+        depth=depth,
+        front=False,
+    )
+    return body.cut(front).cut(back)
+
+
+def _side_logo_cutter(
+    *,
+    cq,
+    y: float,
+    z_center: float,
+    height: float,
+    width: float,
+    depth: float,
+    front: bool,
+):
+    shape = _title_logo_shape(cq, height=height, width=width, depth=depth)
+    if front:
+        shape = shape.mirror("YZ")
+        angle = 90.0
+    else:
+        shape = shape.mirror("XZ")
+        angle = -90.0
+    shape = shape.rotate((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), angle)
+    shape = shape.translate((0.0, y, z_center))
+    return cq.Workplane("XY").add(shape)
+
+
+def _title_logo_shape(cq, *, height: float, width: float, depth: float):
+    dxf_path = files("print_models.assets.logos").joinpath(
+        "dutch_blitz_title_from_124738.dxf"
+    )
+    workplane = cq.importers.importDXF(str(dxf_path))
+    shape = workplane.wires().toPending().extrude(depth).val()
+    logo_aspect = 1.133492252681764
+    x_scale = width / logo_aspect
+    return shape.transformGeometry(
+        cq.Matrix([[x_scale, 0, 0, 0], [0, height, 0, 0], [0, 0, 1, 0]])
+    )
+
+
+def _engrave_container_short_side_slogans(
+    *,
+    cq,
+    body,
+    outer_width: float,
+    outer_height: float,
+    size: float,
+    depth: float,
+):
+    z_center = outer_height / 2.0
+    right = _short_side_slogan_cutter(
+        cq=cq,
+        x=outer_width / 2.0,
+        z_center=z_center,
+        size=size,
+        depth=depth,
+        right=True,
+    )
+    left = _short_side_slogan_cutter(
+        cq=cq,
+        x=-outer_width / 2.0,
+        z_center=z_center,
+        size=size,
+        depth=depth,
+        right=False,
+    )
+    return body.cut(right).cut(left)
+
+
+def _short_side_slogan_cutter(
+    *,
+    cq,
+    x: float,
+    z_center: float,
+    size: float,
+    depth: float,
+    right: bool,
+):
+    distance = -depth if right else depth
+    cutter = _text_block(
+        cq=cq,
+        plane="YZ",
+        origin=(x, 0.0, z_center),
+        text="A Vonderful Goot Game!",
+        size=size,
+        distance=distance,
+        font="Fraunces",
+        line_spacing_factor=0.85,
+    )
+    if right:
+        return cutter
+    return cutter.mirror("XZ")
+
+
+def _text_block(
+    cq,
+    plane: str,
+    origin: tuple[float, float, float],
+    text: str,
+    size: float,
+    distance: float,
+    font: str,
+    line_spacing_factor: float,
+):
+    lines = [line.strip() for line in text.replace("/", "\n").splitlines() if line.strip()]
+    if not lines:
+        return cq.Workplane(plane, origin=origin)
+
+    line_spacing = size * line_spacing_factor
+    total_height = line_spacing * (len(lines) - 1)
+    result = None
+    text_options = _text_options(font)
+
+    for index, line in enumerate(lines):
+        y_offset = total_height / 2.0 - index * line_spacing
+        if plane == "XY":
+            workplane_origin = (origin[0], origin[1] + y_offset, origin[2])
+        else:
+            workplane_origin = origin
+        workplane = cq.Workplane(plane, origin=workplane_origin)
+        if plane in {"XZ", "YZ"}:
+            workplane = workplane.center(0.0, y_offset)
+        text_shape = workplane.text(line, size, distance, combine=False, **text_options)
+        result = text_shape if result is None else result.union(text_shape)
+
+    return result
+
+
+def _text_options(font: str) -> dict[str, str]:
+    font_path = _logo_font_path(font)
+    options = {"font": font, "kind": "regular"}
+    if font_path is not None:
+        options["fontPath"] = str(font_path)
+    return options
+
+
+def _logo_font_path(font: str) -> Path | None:
+    if font == "UnifrakturMaguntia":
+        return Path(
+            str(files("print_models.assets.fonts").joinpath("UnifrakturMaguntia-Book.ttf"))
+        )
+
+    if font == "Fraunces":
+        return Path(
+            str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Regular.ttf"))
+        )
+
+    if font == "Luminari":
+        path = Path("/System/Library/Fonts/Supplemental/Luminari.ttf")
+        if path.exists():
+            return path
+
+    return None
+
+
+
 def _engrave_lid_text(
     *,
     cq,
@@ -416,25 +651,11 @@ def _engrave_lid_text(
     lid_thickness: float,
     text: str,
     size: float,
+    width: float,
     depth: float,
     font: str,
 ):
-    lines = [line.strip() for line in text.replace("/", "\n").splitlines() if line.strip()]
-    if not lines:
-        return lid
-
-    if len(lines) == 1:
-        lines = text.split()
-
-    line_spacing = size * 1.1
-    total_height = line_spacing * (len(lines) - 1)
-
-    for index, line in enumerate(lines):
-        y_offset = total_height / 2.0 - index * line_spacing
-        cutter = (
-            cq.Workplane("XY", origin=(0.0, y_offset, lid_thickness))
-            .text(line, size, -depth, combine=False, font=font, kind="bold")
-        )
-        lid = lid.cut(cutter)
-
-    return lid
+    cutter_shape = _title_logo_shape(cq, height=size, width=width, depth=depth)
+    cutter_shape = cutter_shape.translate((0.0, 0.0, lid_thickness - depth))
+    cutter = cq.Workplane("XY").add(cutter_shape)
+    return lid.cut(cutter)
