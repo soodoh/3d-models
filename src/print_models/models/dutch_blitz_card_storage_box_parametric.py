@@ -25,7 +25,6 @@ PARAMETERS = {
     "logo_size": 40.66,
     "logo_width": 63.95,
     "logo_depth": 0.8,
-    "logo_font": "UnifrakturMaguntia",
     "side_logo_size": 58.0,
     "side_logo_width": 95.0,
     "side_logo_depth": 0.8,
@@ -69,7 +68,6 @@ def build(
     logo_size: float = 40.66,
     logo_width: float = 63.95,
     logo_depth: float = 0.8,
-    logo_font: str = "UnifrakturMaguntia",
     side_logo_size: float = 58.0,
     side_logo_width: float = 95.0,
     side_logo_depth: float = 0.8,
@@ -106,7 +104,6 @@ def build(
             divider_pitch=divider_pitch,
             click_feature=click_feature,
             lid_thickness=lid_thickness,
-            logo_font=logo_font,
             side_logo_size=side_logo_size,
             side_logo_width=side_logo_width,
             side_logo_depth=side_logo_depth,
@@ -126,7 +123,6 @@ def build(
             logo_size=logo_size,
             logo_width=logo_width,
             logo_depth=logo_depth,
-            logo_font=logo_font,
             handle_slot=handle_slot,
             handle_slot_depth=handle_slot_depth,
             click_feature=click_feature,
@@ -156,7 +152,6 @@ def _build_container(
     corner_radius: float,
     click_feature: bool,
     lid_thickness: float,
-    logo_font: str,
     side_logo_size: float,
     side_logo_width: float,
     side_logo_depth: float,
@@ -202,7 +197,6 @@ def _build_container(
             height=side_logo_size,
             width=side_logo_width,
             depth=side_logo_depth,
-            font=logo_font,
         )
 
     if slogan_depth > 0 and slogan_size > 0:
@@ -258,7 +252,6 @@ def _build_lid(
     logo_size: float,
     logo_width: float,
     logo_depth: float,
-    logo_font: str,
     handle_slot: bool,
     handle_slot_depth: float,
     click_feature: bool,
@@ -278,11 +271,9 @@ def _build_lid(
             cq=cq,
             lid=lid,
             lid_thickness=lid_thickness,
-            text="Dutch Blitz",
             size=logo_size,
             width=logo_width,
             depth=logo_depth,
-            font=logo_font,
         )
 
     if handle_slot and handle_slot_depth > 0:
@@ -469,7 +460,6 @@ def _engrave_container_side_logos(
     height: float,
     width: float,
     depth: float,
-    font: str,
 ):
     z_center = outer_height / 2.0
     front = _side_logo_cutter(
@@ -625,20 +615,10 @@ def _text_options(font: str) -> dict[str, str]:
 
 
 def _logo_font_path(font: str) -> Path | None:
-    if font == "UnifrakturMaguntia":
-        return Path(
-            str(files("print_models.assets.fonts").joinpath("UnifrakturMaguntia-Book.ttf"))
-        )
-
     if font == "Fraunces":
         return Path(
             str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Regular.ttf"))
         )
-
-    if font == "Luminari":
-        path = Path("/System/Library/Fonts/Supplemental/Luminari.ttf")
-        if path.exists():
-            return path
 
     return None
 
@@ -649,11 +629,9 @@ def _engrave_lid_text(
     cq,
     lid,
     lid_thickness: float,
-    text: str,
     size: float,
     width: float,
     depth: float,
-    font: str,
 ):
     cutter_shape = _title_logo_shape(cq, height=size, width=width, depth=depth)
     cutter_shape = cutter_shape.translate((0.0, 0.0, lid_thickness - depth))

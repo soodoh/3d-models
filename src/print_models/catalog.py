@@ -7,7 +7,6 @@ from types import ModuleType
 
 MODEL_MODULES = (
     "print_models.models.calibration_cube",
-    "print_models.models.dutch_blitz_card_storage_box",
     "print_models.models.dutch_blitz_card_storage_box_parametric",
     "print_models.models.phone_stand",
 )
