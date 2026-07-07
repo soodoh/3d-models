@@ -24,3 +24,4 @@ exports/*
 *.amf
 *.svg
 *.dxf
+!src/print_models/assets/logos/five_crowns_lid_logo_from_source_section.dxf
