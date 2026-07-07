@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from collections.abc import Mapping
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -77,6 +79,12 @@ def describe_model(module: ModuleType) -> None:
     for name, default in module.PARAMETERS.items():
         print(f"  {name} = {default!r}")
 
+    supported_formats = getattr(module, "SUPPORTED_FORMATS", None)
+    if supported_formats:
+        print()
+        print("Supported formats:")
+        print(f"  {', '.join(supported_formats)}")
+
     notes = getattr(module, "PRINT_NOTES", None)
     if notes:
         print()
@@ -98,11 +106,31 @@ def export_models(models: dict[str, ModuleType], args: argparse.Namespace) -> No
     for name, module in sorted(selected_models.items()):
         parameters = parse_parameters(module, args.param)
         result = module.build(**parameters)
+        supported_formats = getattr(module, "SUPPORTED_FORMATS", EXPORT_FORMATS)
+        exportables = normalize_exportables(name, result)
 
         for file_format in formats:
-            output_path = args.out_dir / f"{name}.{file_format}"
-            result.export(str(output_path))
-            print(output_path)
+            if file_format not in supported_formats:
+                supported = ", ".join(supported_formats)
+                message = f"Model {name!r} supports these formats only: {supported}"
+                if args.all:
+                    print(f"Skipping {name}.{file_format}: {message}", file=sys.stderr)
+                    continue
+                raise SystemExit(message)
+
+            for output_name, exportable in exportables.items():
+                output_path = args.out_dir / f"{output_name}.{file_format}"
+                exportable.export(str(output_path))
+                print(output_path)
+
+
+def normalize_exportables(model_name: str, result: Any) -> dict[str, Any]:
+    """Return one or more named objects that provide an export(path) method."""
+    if not isinstance(result, Mapping):
+        return {model_name: result}
+
+    return {f"{model_name}_{part_name}": exportable for part_name, exportable in result.items()}
+
 
 
 def get_model(models: dict[str, ModuleType], name: str) -> ModuleType:

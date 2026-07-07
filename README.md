@@ -104,4 +104,11 @@ Model conventions:
 ## Included starter models
 
 - `calibration_cube`: a chamfered calibration cube with an optional vertical hole.
+- `dutch_blitz_card_storage_box`: exact mesh replicas of the Printables Dutch Blitz card storage
+  box container and lid. Exports STL/3MF only; use `--param part=container` or
+  `--param part=lid` for one piece.
+- `dutch_blitz_card_storage_box_parametric`: editable CadQuery rebuild for variants. Tune
+  `lid_fit_clearance`, `lid_depth_fit_clearance`, logo sizing/depth, divider dimensions, and other
+  parameters; run `python scripts/validate_dutch_blitz_parametric.py` to compare it against the
+  reference meshes.
 - `phone_stand`: a simple printable desktop phone stand with a front lip.
