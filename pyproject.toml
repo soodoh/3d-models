@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "print-models"
+version = "0.1.0"
+description = "A CadQuery starter repo for parametric 3D-printable models."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "cadquery>=2.5,<3",
+]
+
+[project.scripts]
+generate-model = "print_models.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/print_models"]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

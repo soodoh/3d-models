@@ -1,0 +1,26 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.venv/
+venv/
+.env
+
+# Generated CAD outputs
+build/*
+!build/.gitkeep
+exports/*
+!exports/.gitkeep
+
+# CadQuery / CQ-editor scratch
+*.brep
+*.stp
+*.step
+*.stl
+*.3mf
+*.amf
+*.svg
+*.dxf
