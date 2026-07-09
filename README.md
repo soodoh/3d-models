@@ -106,6 +106,7 @@ Model conventions:
 - `dutch_blitz_storage_box`: editable CadQuery rebuild for Dutch Blitz card storage box
   lid/container variants.
 - `five_crowns_storage_box`: editable CadQuery rebuild for a Five Crowns sliding deck box.
+- `monopoly_deal_storage_box`: editable CadQuery rebuild for a Monopoly Deal sliding deck box.
 - `gridfinity_exact_fit_baseplate`: dynamically tiled Gridfinity baseplate that fills an exact
   outer footprint with the largest centered standard grid that fits. Defaults to a 407 mm x 298 mm
   footprint split for a Prusa CORE One+ safe print area.
