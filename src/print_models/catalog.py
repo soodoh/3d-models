@@ -9,6 +9,7 @@ MODEL_MODULES = (
     "print_models.models.dutch_blitz_storage_box",
     "print_models.models.five_crowns_storage_box",
     "print_models.models.monopoly_deal_storage_box",
+    "print_models.models.gridfinity_box",
     "print_models.models.gridfinity_exact_fit_baseplate",
 )
 
