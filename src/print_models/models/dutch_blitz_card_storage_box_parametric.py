@@ -28,7 +28,7 @@ PARAMETERS = {
     "side_logo_size": 58.0,
     "side_logo_width": 95.0,
     "side_logo_depth": 0.8,
-    "slogan_size": 6.5,
+    "slogan_size": 10.0,
     "slogan_depth": 0.8,
     "handle_slot": True,
     "handle_slot_depth": 2.0,
@@ -71,7 +71,7 @@ def build(
     side_logo_size: float = 58.0,
     side_logo_width: float = 95.0,
     side_logo_depth: float = 0.8,
-    slogan_size: float = 6.5,
+    slogan_size: float = 10.0,
     slogan_depth: float = 0.8,
     handle_slot: bool = True,
     handle_slot_depth: float = 2.0,
@@ -561,10 +561,11 @@ def _short_side_slogan_cutter(
         cq=cq,
         plane="YZ",
         origin=(x, 0.0, z_center),
-        text="A Vonderful Goot Game!",
+        text="A Vonderful\nGoot Game!",
         size=size,
         distance=distance,
         font="Fraunces",
+        kind="bold",
         line_spacing_factor=0.85,
     )
     if right:
@@ -580,6 +581,7 @@ def _text_block(
     size: float,
     distance: float,
     font: str,
+    kind: str,
     line_spacing_factor: float,
 ):
     lines = [line.strip() for line in text.replace("/", "\n").splitlines() if line.strip()]
@@ -589,7 +591,7 @@ def _text_block(
     line_spacing = size * line_spacing_factor
     total_height = line_spacing * (len(lines) - 1)
     result = None
-    text_options = _text_options(font)
+    text_options = _text_options(font, kind)
 
     for index, line in enumerate(lines):
         y_offset = total_height / 2.0 - index * line_spacing
@@ -606,19 +608,18 @@ def _text_block(
     return result
 
 
-def _text_options(font: str) -> dict[str, str]:
-    font_path = _logo_font_path(font)
-    options = {"font": font, "kind": "regular"}
+def _text_options(font: str, kind: str) -> dict[str, str]:
+    font_path = _logo_font_path(font, kind)
+    options = {"font": font, "kind": kind}
     if font_path is not None:
         options["fontPath"] = str(font_path)
     return options
 
 
-def _logo_font_path(font: str) -> Path | None:
+def _logo_font_path(font: str, kind: str) -> Path | None:
     if font == "Fraunces":
-        return Path(
-            str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Regular.ttf"))
-        )
+        filename = "Fraunces144pt-Bold.ttf" if kind == "bold" else "Fraunces144pt-Regular.ttf"
+        return Path(str(files("print_models.assets.fonts").joinpath(filename)))
 
     return None
 
