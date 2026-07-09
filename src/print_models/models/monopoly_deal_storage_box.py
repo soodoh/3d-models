@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from importlib.resources import files
-from pathlib import Path
 
 NAME = "monopoly_deal_storage_box"
 DESCRIPTION = (
@@ -35,7 +34,9 @@ PARAMETERS = {
 }
 PRINT_NOTES = (
     "The body and lid are modeled in the same assembled coordinate frame as the source STLs. "
-    "Use part=container or part=lid to export individual printable parts."
+    "Use part=container or part=lid to export individual printable parts. "
+    "The Monopoly Deal lid logo outline is extracted from Printables model 697154 by GWiz "
+    "under CC-BY-NC-SA 4.0."
 )
 
 _PART_ALIASES = {
@@ -257,10 +258,10 @@ def _build_lid(
     lid = lid.union(panel)
 
     if logo_raise:
-        logo = _five_crowns_logo(
+        logo = _monopoly_deal_logo(
             cq=cq,
-            z=bottom_z + base_thickness,
-            height=relief_height,
+            z=bottom_z + base_thickness - 0.05,
+            height=relief_height + 0.05,
         ).translate((center_x, center_y, 0.0))
         lid = lid.union(logo)
 
@@ -484,135 +485,9 @@ def _raised_lid_border(cq, width: float, depth: float, height: float, z: float):
     return outer.cut(inner)
 
 
-def _five_crowns_logo(cq, *, z: float, height: float):
+def _monopoly_deal_logo(cq, *, z: float, height: float):
     dxf_path = files("print_models.assets.logos").joinpath(
-        "five_crowns_lid_logo_from_source_section.dxf"
+        "monopoly_deal_lid_logo_from_printables_697154.dxf"
     )
     logo = cq.importers.importDXF(str(dxf_path)).wires().toPending().extrude(height)
     return logo.translate((0.0, 0.0, z))
-
-
-def _logo_background(cq, *, z: float, height: float):
-    # Hand-fit outline matching the raised Five Crowns emblem from the baseline lid.
-    points = [
-        (-38.2, 8.3),
-        (-33.5, 7.8),
-        (-27.0, 10.0),
-        (-23.2, 14.2),
-        (-21.2, 18.2),
-        (-16.8, 15.2),
-        (-10.5, 13.7),
-        (-5.0, 15.2),
-        (-1.5, 23.8),
-        (2.4, 15.6),
-        (8.5, 13.8),
-        (14.4, 15.2),
-        (18.0, 18.2),
-        (20.0, 13.2),
-        (25.0, 9.6),
-        (31.0, 8.0),
-        (36.5, 8.6),
-        (31.0, -11.8),
-        (32.6, -15.0),
-        (35.0, -16.4),
-        (33.2, -18.8),
-        (28.2, -19.4),
-        (15.0, -17.8),
-        (0.0, -16.3),
-        (-15.2, -17.7),
-        (-28.8, -19.3),
-        (-34.0, -18.8),
-        (-35.2, -16.5),
-        (-32.4, -14.7),
-        (-31.2, -11.2),
-    ]
-    background = (
-        cq.Workplane("XY")
-        .polyline(points)
-        .close()
-        .extrude(height)
-        .translate((0.0, 0.0, z))
-    )
-    try:
-        background = background.edges(">Z").fillet(0.45)
-    except Exception:
-        pass
-    return background
-
-
-def _crown(cq, *, z: float, height: float, width: float, depth: float):
-    half_width = width / 2.0
-    bottom = -depth / 2.0
-    points = [
-        (-half_width, bottom),
-        (-half_width * 0.74, bottom + 3.1),
-        (-half_width * 0.62, bottom + 12.5),
-        (-half_width * 0.38, bottom + 10.0),
-        (0.0, depth / 2.0),
-        (half_width * 0.38, bottom + 10.0),
-        (half_width * 0.62, bottom + 12.5),
-        (half_width * 0.74, bottom + 3.1),
-        (half_width, bottom),
-        (half_width * 0.88, bottom - 3.5),
-        (0.0, bottom - 0.4),
-        (-half_width * 0.88, bottom - 3.5),
-    ]
-    crown = (
-        cq.Workplane("XY")
-        .polyline(points)
-        .close()
-        .extrude(height)
-        .translate((0.0, 0.0, z))
-    )
-    try:
-        crown = crown.edges(">Z").fillet(0.45)
-    except Exception:
-        pass
-    return crown
-
-
-def _ribbon(cq, *, z: float, height: float, width: float, depth: float):
-    half_width = width / 2.0
-    half_depth = depth / 2.0
-    points = [
-        (-half_width, 0.0),
-        (-half_width + 4.0, half_depth),
-        (-8.0, half_depth * 0.55),
-        (0.0, half_depth * 0.4),
-        (8.0, half_depth * 0.55),
-        (half_width - 4.0, half_depth),
-        (half_width, 0.0),
-        (half_width - 5.4, -half_depth),
-        (8.0, -half_depth * 0.75),
-        (0.0, -half_depth * 0.55),
-        (-8.0, -half_depth * 0.75),
-        (-half_width + 5.4, -half_depth),
-    ]
-    ribbon = (
-        cq.Workplane("XY")
-        .polyline(points)
-        .close()
-        .extrude(height)
-        .translate((0.0, 0.0, z))
-    )
-    try:
-        ribbon = ribbon.edges(">Z").fillet(0.6)
-    except Exception:
-        pass
-    return ribbon
-
-
-def _text_shape(cq, *, text: str, size: float, distance: float, z: float, y: float):
-    workplane = cq.Workplane("XY", origin=(0.0, y, z))
-    return workplane.text(text, size, distance, combine=True, **_text_options())
-
-
-def _text_options() -> dict[str, str]:
-    font_path = _logo_font_path()
-    return {"font": "Fraunces", "kind": "regular", "fontPath": str(font_path)}
-
-
-def _logo_font_path() -> Path:
-    return Path(
-        str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.ttf"))
-    )

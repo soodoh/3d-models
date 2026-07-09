@@ -23,6 +23,7 @@ packages = ["src/print_models"]
 "src/print_models/assets/fonts/Fraunces144pt-Black.ttf" = "print_models/assets/fonts/Fraunces144pt-Black.ttf"
 "src/print_models/assets/logos/dutch_blitz_title_from_124738.dxf" = "print_models/assets/logos/dutch_blitz_title_from_124738.dxf"
 "src/print_models/assets/logos/five_crowns_lid_logo_from_source_section.dxf" = "print_models/assets/logos/five_crowns_lid_logo_from_source_section.dxf"
+"src/print_models/assets/logos/monopoly_deal_lid_logo_from_printables_697154.dxf" = "print_models/assets/logos/monopoly_deal_lid_logo_from_printables_697154.dxf"
 
 [tool.ruff]
 line-length = 100
