@@ -14,14 +14,3 @@ build/*
 !build/.gitkeep
 exports/*
 !exports/.gitkeep
-
-# CadQuery / CQ-editor scratch
-*.brep
-*.stp
-*.step
-*.stl
-*.3mf
-*.amf
-*.svg
-*.dxf
-!src/print_models/assets/logos/five_crowns_lid_logo_from_source_section.dxf
