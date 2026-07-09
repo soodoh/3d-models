@@ -504,15 +504,18 @@ def _side_logo_cutter(
     depth: float,
     front: bool,
 ):
-    shape = _title_logo_shape(cq, height=height, width=width, depth=depth)
+    overshoot = 0.05
+    shape = _title_logo_shape(cq, height=height, width=width, depth=depth + overshoot)
     if front:
         shape = shape.mirror("YZ")
         angle = 90.0
+        y_offset = overshoot
     else:
         shape = shape.mirror("XZ")
         angle = -90.0
+        y_offset = -overshoot
     shape = shape.rotate((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), angle)
-    shape = shape.translate((0.0, y, z_center))
+    shape = shape.translate((0.0, y + y_offset, z_center))
     return cq.Workplane("XY").add(shape)
 
 
