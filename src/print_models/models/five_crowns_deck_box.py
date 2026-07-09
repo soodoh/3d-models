@@ -582,4 +582,4 @@ def _text_options() -> dict[str, str]:
 
 
 def _logo_font_path() -> Path:
-    return Path(str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Regular.ttf")))
+    return Path(str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.ttf")))

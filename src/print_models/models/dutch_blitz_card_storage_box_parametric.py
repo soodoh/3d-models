@@ -635,8 +635,7 @@ def _text_options(font: str, kind: str) -> dict[str, str]:
 
 def _logo_font_path(font: str, kind: str) -> Path | None:
     if font == "Fraunces":
-        filename = "Fraunces144pt-Bold.ttf" if kind == "bold" else "Fraunces144pt-Regular.ttf"
-        return Path(str(files("print_models.assets.fonts").joinpath(filename)))
+        return Path(str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.ttf")))
 
     return None
 
