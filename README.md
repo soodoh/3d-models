@@ -101,11 +101,11 @@ Model conventions:
 - Export STL for slicers and STEP for editable CAD handoff.
 - Prefer fillets/chamfers on sharp edges where they improve print quality.
 
-## Included starter models
+## Included models
 
-- `calibration_cube`: a chamfered calibration cube with an optional vertical hole.
-- `dutch_blitz_card_storage_box_parametric`: editable CadQuery rebuild for Dutch Blitz card storage
-  box lid/container variants. Tune
-  `lid_fit_clearance`, `lid_depth_fit_clearance`, logo sizing/depth, divider dimensions, and other
-  parameters.
-- `phone_stand`: a simple printable desktop phone stand with a front lip.
+- `dutch_blitz_storage_box`: editable CadQuery rebuild for Dutch Blitz card storage box
+  lid/container variants.
+- `five_crowns_storage_box`: editable CadQuery rebuild for a Five Crowns sliding deck box.
+- `gridfinity_exact_fit_baseplate`: dynamically tiled Gridfinity baseplate that fills an exact
+  outer footprint with the largest centered standard grid that fits. Defaults to a 407 mm x 298 mm
+  footprint split for a Prusa CORE One+ safe print area.
