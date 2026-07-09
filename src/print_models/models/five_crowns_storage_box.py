@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from importlib.resources import files
-from pathlib import Path
 
 NAME = "five_crowns_storage_box"
 DESCRIPTION = (
@@ -26,7 +25,6 @@ PARAMETERS = {
     "lid_bottom_z": 42.000004,
     "lid_base_thickness": 4.30,
     "lid_relief_height": 1.23,
-    "lid_corner_radius": 1.15,
     "lid_right_gap": 3.0,
     "lid_edge_chamfer": 0.8,
     "side_groove_depth": 0.65,
@@ -64,7 +62,6 @@ def build(
     lid_bottom_z: float = 42.000004,
     lid_base_thickness: float = 4.30,
     lid_relief_height: float = 1.23,
-    lid_corner_radius: float = 1.15,
     lid_right_gap: float = 3.0,
     lid_edge_chamfer: float = 0.8,
     side_groove_depth: float = 0.65,
@@ -104,7 +101,6 @@ def build(
             bottom_z=lid_bottom_z,
             base_thickness=lid_base_thickness,
             relief_height=lid_relief_height,
-            corner_radius=lid_corner_radius,
             edge_chamfer=lid_edge_chamfer,
             center_x=lid_center_x,
             center_y=body_center_y,
@@ -221,7 +217,6 @@ def _build_lid(
     bottom_z: float,
     base_thickness: float,
     relief_height: float,
-    corner_radius: float,
     edge_chamfer: float,
     center_x: float,
     center_y: float,
@@ -241,7 +236,6 @@ def _build_lid(
         cq=cq,
         lid=lid,
         width=width,
-        depth=depth,
         bottom_z=bottom_z,
         center_x=center_x,
         center_y=center_y,
@@ -298,7 +292,6 @@ def _cut_lid_click_notches(
     cq,
     lid,
     width: float,
-    depth: float,
     bottom_z: float,
     center_x: float,
     center_y: float,
@@ -455,26 +448,6 @@ def _dutch_style_top_click_features(
     return track_floor.union(center_lug)
 
 
-def _add_top_lid_lip(
-    *,
-    cq,
-    body,
-    outer_width: float,
-    outer_depth: float,
-    center_x: float,
-    center_y: float,
-    z: float,
-):
-    lip_height = 0.32
-    outer = _rounded_prism(
-        cq, outer_width - 1.8, outer_depth - 1.8, lip_height, 1.0
-    ).translate((center_x, center_y, z))
-    inner = _rounded_prism(
-        cq, outer_width - 5.0, outer_depth - 5.0, lip_height + 0.2, 0.6
-    ).translate((center_x, center_y, z - 0.1))
-    return body.union(outer.cut(inner))
-
-
 def _raised_lid_border(cq, width: float, depth: float, height: float, z: float):
     border = 1.05
     outer = _rounded_prism(cq, width, depth, height, 0.75).translate((0.0, 0.0, z))
@@ -490,129 +463,3 @@ def _five_crowns_logo(cq, *, z: float, height: float):
     )
     logo = cq.importers.importDXF(str(dxf_path)).wires().toPending().extrude(height)
     return logo.translate((0.0, 0.0, z))
-
-
-def _logo_background(cq, *, z: float, height: float):
-    # Hand-fit outline matching the raised Five Crowns emblem from the baseline lid.
-    points = [
-        (-38.2, 8.3),
-        (-33.5, 7.8),
-        (-27.0, 10.0),
-        (-23.2, 14.2),
-        (-21.2, 18.2),
-        (-16.8, 15.2),
-        (-10.5, 13.7),
-        (-5.0, 15.2),
-        (-1.5, 23.8),
-        (2.4, 15.6),
-        (8.5, 13.8),
-        (14.4, 15.2),
-        (18.0, 18.2),
-        (20.0, 13.2),
-        (25.0, 9.6),
-        (31.0, 8.0),
-        (36.5, 8.6),
-        (31.0, -11.8),
-        (32.6, -15.0),
-        (35.0, -16.4),
-        (33.2, -18.8),
-        (28.2, -19.4),
-        (15.0, -17.8),
-        (0.0, -16.3),
-        (-15.2, -17.7),
-        (-28.8, -19.3),
-        (-34.0, -18.8),
-        (-35.2, -16.5),
-        (-32.4, -14.7),
-        (-31.2, -11.2),
-    ]
-    background = (
-        cq.Workplane("XY")
-        .polyline(points)
-        .close()
-        .extrude(height)
-        .translate((0.0, 0.0, z))
-    )
-    try:
-        background = background.edges(">Z").fillet(0.45)
-    except Exception:
-        pass
-    return background
-
-
-def _crown(cq, *, z: float, height: float, width: float, depth: float):
-    half_width = width / 2.0
-    bottom = -depth / 2.0
-    points = [
-        (-half_width, bottom),
-        (-half_width * 0.74, bottom + 3.1),
-        (-half_width * 0.62, bottom + 12.5),
-        (-half_width * 0.38, bottom + 10.0),
-        (0.0, depth / 2.0),
-        (half_width * 0.38, bottom + 10.0),
-        (half_width * 0.62, bottom + 12.5),
-        (half_width * 0.74, bottom + 3.1),
-        (half_width, bottom),
-        (half_width * 0.88, bottom - 3.5),
-        (0.0, bottom - 0.4),
-        (-half_width * 0.88, bottom - 3.5),
-    ]
-    crown = (
-        cq.Workplane("XY")
-        .polyline(points)
-        .close()
-        .extrude(height)
-        .translate((0.0, 0.0, z))
-    )
-    try:
-        crown = crown.edges(">Z").fillet(0.45)
-    except Exception:
-        pass
-    return crown
-
-
-def _ribbon(cq, *, z: float, height: float, width: float, depth: float):
-    half_width = width / 2.0
-    half_depth = depth / 2.0
-    points = [
-        (-half_width, 0.0),
-        (-half_width + 4.0, half_depth),
-        (-8.0, half_depth * 0.55),
-        (0.0, half_depth * 0.4),
-        (8.0, half_depth * 0.55),
-        (half_width - 4.0, half_depth),
-        (half_width, 0.0),
-        (half_width - 5.4, -half_depth),
-        (8.0, -half_depth * 0.75),
-        (0.0, -half_depth * 0.55),
-        (-8.0, -half_depth * 0.75),
-        (-half_width + 5.4, -half_depth),
-    ]
-    ribbon = (
-        cq.Workplane("XY")
-        .polyline(points)
-        .close()
-        .extrude(height)
-        .translate((0.0, 0.0, z))
-    )
-    try:
-        ribbon = ribbon.edges(">Z").fillet(0.6)
-    except Exception:
-        pass
-    return ribbon
-
-
-def _text_shape(cq, *, text: str, size: float, distance: float, z: float, y: float):
-    workplane = cq.Workplane("XY", origin=(0.0, y, z))
-    return workplane.text(text, size, distance, combine=True, **_text_options())
-
-
-def _text_options() -> dict[str, str]:
-    font_path = _logo_font_path()
-    return {"font": "Fraunces", "kind": "regular", "fontPath": str(font_path)}
-
-
-def _logo_font_path() -> Path:
-    return Path(
-        str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.ttf"))
-    )

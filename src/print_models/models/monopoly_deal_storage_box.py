@@ -25,7 +25,6 @@ PARAMETERS = {
     "lid_bottom_z": 35.000004,
     "lid_base_thickness": 4.30,
     "lid_relief_height": 1.23,
-    "lid_corner_radius": 1.15,
     "lid_right_gap": 3.0,
     "lid_edge_chamfer": 0.8,
     "side_groove_depth": 0.65,
@@ -65,7 +64,6 @@ def build(
     lid_bottom_z: float = 35.000004,
     lid_base_thickness: float = 4.30,
     lid_relief_height: float = 1.23,
-    lid_corner_radius: float = 1.15,
     lid_right_gap: float = 3.0,
     lid_edge_chamfer: float = 0.8,
     side_groove_depth: float = 0.65,
@@ -105,7 +103,6 @@ def build(
             bottom_z=lid_bottom_z,
             base_thickness=lid_base_thickness,
             relief_height=lid_relief_height,
-            corner_radius=lid_corner_radius,
             edge_chamfer=lid_edge_chamfer,
             center_x=lid_center_x,
             center_y=body_center_y,
@@ -222,7 +219,6 @@ def _build_lid(
     bottom_z: float,
     base_thickness: float,
     relief_height: float,
-    corner_radius: float,
     edge_chamfer: float,
     center_x: float,
     center_y: float,
@@ -242,7 +238,6 @@ def _build_lid(
         cq=cq,
         lid=lid,
         width=width,
-        depth=depth,
         bottom_z=bottom_z,
         center_x=center_x,
         center_y=center_y,
@@ -299,7 +294,6 @@ def _cut_lid_click_notches(
     cq,
     lid,
     width: float,
-    depth: float,
     bottom_z: float,
     center_x: float,
     center_y: float,
@@ -455,25 +449,6 @@ def _dutch_style_top_click_features(
 
     return track_floor.union(center_lug)
 
-
-def _add_top_lid_lip(
-    *,
-    cq,
-    body,
-    outer_width: float,
-    outer_depth: float,
-    center_x: float,
-    center_y: float,
-    z: float,
-):
-    lip_height = 0.32
-    outer = _rounded_prism(
-        cq, outer_width - 1.8, outer_depth - 1.8, lip_height, 1.0
-    ).translate((center_x, center_y, z))
-    inner = _rounded_prism(
-        cq, outer_width - 5.0, outer_depth - 5.0, lip_height + 0.2, 0.6
-    ).translate((center_x, center_y, z - 0.1))
-    return body.union(outer.cut(inner))
 
 
 def _raised_lid_border(cq, width: float, depth: float, height: float, z: float):

@@ -7,7 +7,9 @@ from importlib.resources import files
 from pathlib import Path
 
 NAME = "dutch_blitz_storage_box"
-DESCRIPTION = "Parametric CadQuery Dutch Blitz card storage box with editable lid fit and logo sizing."
+DESCRIPTION = (
+    "Parametric CadQuery Dutch Blitz card storage box with editable lid fit and logo sizing."
+)
 PARAMETERS = {
     "part": "all",
     "outer_width": 123.0,
@@ -213,6 +215,7 @@ def _build_container(
             _side_dovetail_track_cuts(
                 cq=cq,
                 outer_width=outer_width,
+                wall_thickness=wall_thickness,
                 outer_height=outer_height,
                 track_z=track_z,
             )
@@ -373,7 +376,12 @@ def _card_slot_cut(
 
 
 def _side_dovetail_track_cuts(
-    *, cq, outer_width: float, outer_height: float, track_z: float
+    *,
+    cq,
+    outer_width: float,
+    wall_thickness: float,
+    outer_height: float,
+    track_z: float,
 ):
     groove_bottom_z = track_z - 0.5
     groove_outer_y = 31.294306
@@ -393,8 +401,8 @@ def _side_dovetail_track_cuts(
         (groove_inner_y, outer_height),
     ]
     negative_profile = [(-y, z) for y, z in positive_profile]
-    track_length = outer_width - 4.0
-    track_center_x = 2.0
+    track_length = outer_width - wall_thickness
+    track_center_x = wall_thickness / 2.0
     positive_cut = (
         cq.Workplane("YZ")
         .polyline(positive_profile)
@@ -625,14 +633,14 @@ def _text_block(
 
 
 def _text_options(font: str, kind: str) -> dict[str, str]:
-    font_path = _logo_font_path(font, kind)
+    font_path = _logo_font_path(font)
     options = {"font": font, "kind": kind}
     if font_path is not None:
         options["fontPath"] = str(font_path)
     return options
 
 
-def _logo_font_path(font: str, kind: str) -> Path | None:
+def _logo_font_path(font: str) -> Path | None:
     if font == "Fraunces":
         return Path(
             str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.ttf"))

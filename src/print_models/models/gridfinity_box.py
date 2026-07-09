@@ -177,7 +177,9 @@ def _resolve_positions(
     return sorted_positions
 
 
-def _parse_position_list(parameter_name: str, raw_positions: str | Sequence[float]) -> tuple[float, ...]:
+def _parse_position_list(
+    parameter_name: str, raw_positions: str | Sequence[float]
+) -> tuple[float, ...]:
     if isinstance(raw_positions, str):
         stripped_positions = raw_positions.strip()
         if not stripped_positions:
@@ -215,7 +217,9 @@ def _validate_positions(
                 f"{maximum_center:g} mm."
             )
 
-    for previous_position, current_position in zip(positions_mm, positions_mm[1:]):
+    for previous_position, current_position in zip(
+        positions_mm, positions_mm[1:], strict=False
+    ):
         distance = current_position - previous_position
         if distance <= divider_thickness_mm + POSITION_TOLERANCE_MM:
             raise ValueError(

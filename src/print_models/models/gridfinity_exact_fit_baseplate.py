@@ -123,7 +123,6 @@ def _build_tile(
     tile_width = left_margin + cells_x * GRID_UNIT + right_margin
     tile_depth = front_margin + cells_y * GRID_UNIT + back_margin
     grid_width = cells_x * GRID_UNIT
-    grid_depth = cells_y * GRID_UNIT
 
     result = grid
 
