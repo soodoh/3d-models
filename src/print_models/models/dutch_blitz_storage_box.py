@@ -432,37 +432,21 @@ def _right_lid_track_cut(
 
 def _top_click_features(*, cq, outer_width: float, outer_depth: float, track_z: float):
     track_center_x = outer_width / 2.0 - 2.0
-    frame_outer_width = outer_width - 4.0
     frame_outer_depth = outer_depth - 3.411388
-    frame_inner_width = outer_width - 10.725808
     frame_inner_depth = outer_depth - 7.0
-    frame_center_x = 2.0
-    inner_center_x = 0.0
-    frame_outer = (
+    side_strip_depth = (frame_outer_depth - frame_inner_depth) / 2.0
+    side_strip_center_offset = frame_inner_depth / 2.0 + side_strip_depth / 2.0
+    positive_side_strip = (
         cq.Workplane("XY")
-        .box(frame_outer_width, frame_outer_depth, 0.2)
-        .translate((frame_center_x, 0.0, track_z - 0.1))
+        .box(outer_width, side_strip_depth, 0.2)
+        .translate((0.0, side_strip_center_offset, track_z - 0.1))
     )
-    frame_inner = (
+    negative_side_strip = (
         cq.Workplane("XY")
-        .box(frame_inner_width, frame_inner_depth, 0.4)
-        .translate((inner_center_x, 0.0, track_z - 0.1))
+        .box(outer_width, side_strip_depth, 0.2)
+        .translate((0.0, -side_strip_center_offset, track_z - 0.1))
     )
-    track_floor = frame_outer.cut(frame_inner)
-
-    back_support_outer_x = frame_center_x - frame_outer_width / 2.0
-    back_support_inner_x = inner_center_x - frame_inner_width / 2.0
-    back_support_width = back_support_inner_x - back_support_outer_x
-    back_support_center_x = back_support_outer_x + back_support_width / 2.0
-    back_support = (
-        cq.Workplane("XY")
-        .box(
-            back_support_width,
-            frame_outer_depth,
-            track_z,
-        )
-        .translate((back_support_center_x, 0.0, track_z / 2.0))
-    )
+    track_floor = positive_side_strip.union(negative_side_strip)
 
     lug = (
         cq.Workplane("XY", origin=(0.0, 0.0, track_z))
@@ -475,7 +459,7 @@ def _top_click_features(*, cq, outer_width: float, outer_depth: float, track_z: 
     except Exception:
         pass
 
-    return track_floor.union(back_support).union(lug)
+    return track_floor.union(lug)
 
 
 def _engrave_container_side_logos(
