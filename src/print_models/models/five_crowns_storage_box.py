@@ -22,7 +22,7 @@ PARAMETERS = {
     "body_center_x": -0.103886,
     "body_center_y": -0.356632,
     "lid_width": 95.362904,
-    "lid_depth": 59.753345,
+    "lid_depth": 61.820216,
     "lid_bottom_z": 42.000004,
     "lid_base_thickness": 4.30,
     "lid_relief_height": 1.23,
@@ -60,7 +60,7 @@ def build(
     body_center_x: float = -0.103886,
     body_center_y: float = -0.356632,
     lid_width: float = 95.362904,
-    lid_depth: float = 59.753345,
+    lid_depth: float = 61.820216,
     lid_bottom_z: float = 42.000004,
     lid_base_thickness: float = 4.30,
     lid_relief_height: float = 1.23,
@@ -175,7 +175,8 @@ def _build_container(
         _dutch_style_side_dovetail_track_cuts(
             cq=cq,
             outer_width=outer_width,
-            outer_depth=outer_depth,
+            inner_depth=inner_depth,
+            wall_thickness=wall_thickness,
             center_x=center_x,
             center_y=center_y,
             track_z=track_floor_z,
@@ -186,7 +187,7 @@ def _build_container(
         _dutch_style_right_lid_track_cut(
             cq=cq,
             outer_width=outer_width,
-            outer_depth=outer_depth,
+            inner_depth=inner_depth,
             body_top_z=body_top_z,
             center_x=center_x,
             center_y=center_y,
@@ -197,8 +198,7 @@ def _build_container(
         _dutch_style_top_click_features(
             cq=cq,
             outer_width=outer_width,
-            outer_depth=outer_depth,
-            body_bottom_z=body_bottom_z,
+            inner_depth=inner_depth,
             center_x=center_x,
             center_y=center_y,
             track_z=track_floor_z,
@@ -349,15 +349,16 @@ def _dutch_style_side_dovetail_track_cuts(
     *,
     cq,
     outer_width: float,
-    outer_depth: float,
+    inner_depth: float,
+    wall_thickness: float,
     center_x: float,
     center_y: float,
     track_z: float,
     body_top_z: float,
 ):
     groove_bottom_z = track_z - 0.5
-    groove_outer_y = center_y + outer_depth / 2.0 - 1.705694
-    groove_inner_y = center_y + outer_depth / 2.0 - 4.0
+    groove_inner_y = center_y + inner_depth / 2.0
+    groove_outer_y = groove_inner_y + 2.294306
     positive_profile = [
         (groove_inner_y, groove_bottom_z),
         (groove_inner_y + 0.007, groove_bottom_z + 0.077),
@@ -373,8 +374,8 @@ def _dutch_style_side_dovetail_track_cuts(
         (groove_inner_y, body_top_z + 0.4),
     ]
     negative_profile = [(2.0 * center_y - y, z) for y, z in positive_profile]
-    track_length = outer_width - 4.0
-    track_center_x = center_x + 2.0
+    track_length = outer_width - wall_thickness
+    track_center_x = center_x + wall_thickness / 2.0
     positive_cut = (
         cq.Workplane("YZ")
         .polyline(positive_profile)
@@ -396,14 +397,14 @@ def _dutch_style_right_lid_track_cut(
     *,
     cq,
     outer_width: float,
-    outer_depth: float,
+    inner_depth: float,
     body_top_z: float,
     center_x: float,
     center_y: float,
     track_z: float,
 ):
     cut_width = 6.72
-    cut_depth = outer_depth - 7.0
+    cut_depth = inner_depth + 1.0
     cut_height = body_top_z - track_z + 0.5
     return (
         cq.Workplane("XY")
@@ -418,47 +419,27 @@ def _dutch_style_top_click_features(
     *,
     cq,
     outer_width: float,
-    outer_depth: float,
-    body_bottom_z: float,
+    inner_depth: float,
     center_x: float,
     center_y: float,
     track_z: float,
 ):
     track_center_x = center_x + outer_width / 2.0 - 2.0
-    frame_outer_width = outer_width - 4.0
-    frame_outer_depth = outer_depth - 3.411388
-    frame_inner_width = outer_width - 10.725808
-    frame_inner_depth = outer_depth - 7.0
-    frame_center_x = center_x + 2.0
-    inner_center_x = center_x
-    frame_outer = (
+    groove_inner_y = center_y + inner_depth / 2.0
+    groove_outer_y = groove_inner_y + 2.294306
+    side_strip_depth = groove_outer_y - (groove_inner_y + 0.5)
+    side_strip_center_offset = inner_depth / 2.0 + 0.5 + side_strip_depth / 2.0
+    positive_side_strip = (
         cq.Workplane("XY")
-        .box(frame_outer_width, frame_outer_depth, 0.2)
-        .translate((frame_center_x, center_y, track_z - 0.1))
+        .box(outer_width, side_strip_depth, 0.2)
+        .translate((center_x, center_y + side_strip_center_offset, track_z - 0.1))
     )
-    frame_inner = (
+    negative_side_strip = (
         cq.Workplane("XY")
-        .box(frame_inner_width, frame_inner_depth, 0.4)
-        .translate((inner_center_x, center_y, track_z - 0.1))
+        .box(outer_width, side_strip_depth, 0.2)
+        .translate((center_x, center_y - side_strip_center_offset, track_z - 0.1))
     )
-    track_floor = frame_outer.cut(frame_inner)
-
-    back_support_outer_x = frame_center_x - frame_outer_width / 2.0
-    back_support_inner_x = inner_center_x - frame_inner_width / 2.0
-    back_support_width = back_support_inner_x - back_support_outer_x
-    back_support_center_x = back_support_outer_x + back_support_width / 2.0
-    back_support_height = track_z - body_bottom_z
-    back_support = (
-        cq.Workplane("XY")
-        .box(
-            back_support_width,
-            frame_outer_depth,
-            back_support_height,
-        )
-        .translate(
-            (back_support_center_x, center_y, body_bottom_z + back_support_height / 2.0)
-        )
-    )
+    track_floor = positive_side_strip.union(negative_side_strip)
 
     center_lug = (
         cq.Workplane("XY", origin=(0.0, 0.0, track_z))
@@ -471,7 +452,7 @@ def _dutch_style_top_click_features(
     except Exception:
         pass
 
-    return track_floor.union(back_support).union(center_lug)
+    return track_floor.union(center_lug)
 
 
 def _add_top_lid_lip(
