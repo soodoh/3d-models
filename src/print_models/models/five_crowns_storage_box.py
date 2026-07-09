@@ -6,13 +6,13 @@ from collections.abc import Mapping
 from importlib.resources import files
 from pathlib import Path
 
-NAME = "five_crowns_deck_box"
+NAME = "five_crowns_storage_box"
 DESCRIPTION = (
     "CadQuery rebuild of the Printables Five Crowns deck box body and sliding lid."
 )
 PARAMETERS = {
     "part": "all",
-    "outer_width": 96.0,
+    "outer_width": 98.362904,
     "outer_depth": 64.0,
     "body_bottom_z": -2.0,
     "body_height": 48.0,
@@ -21,7 +21,7 @@ PARAMETERS = {
     "corner_radius": 1.55,
     "body_center_x": -0.103886,
     "body_center_y": -0.356632,
-    "lid_width": 93.0,
+    "lid_width": 95.362904,
     "lid_depth": 59.753345,
     "lid_bottom_z": 42.000004,
     "lid_base_thickness": 4.30,
@@ -50,7 +50,7 @@ _PART_ALIASES = {
 
 def build(
     part: str = "all",
-    outer_width: float = 96.0,
+    outer_width: float = 98.362904,
     outer_depth: float = 64.0,
     body_bottom_z: float = -2.0,
     body_height: float = 48.0,
@@ -59,7 +59,7 @@ def build(
     corner_radius: float = 1.55,
     body_center_x: float = -0.103886,
     body_center_y: float = -0.356632,
-    lid_width: float = 93.0,
+    lid_width: float = 95.362904,
     lid_depth: float = 59.753345,
     lid_bottom_z: float = 42.000004,
     lid_base_thickness: float = 4.30,
@@ -147,9 +147,9 @@ def _build_container(
     track_floor_z = body_top_z - lid_thickness - 0.2
     inner_height = body_top_z - inner_bottom_z + 0.6
 
-    body = _rounded_prism(cq, outer_width, outer_depth, body_height, corner_radius).translate(
-        (center_x, center_y, body_bottom_z)
-    )
+    body = _rounded_prism(
+        cq, outer_width, outer_depth, body_height, corner_radius
+    ).translate((center_x, center_y, body_bottom_z))
     body = body.cut(
         _rounded_prism(cq, inner_width, inner_depth, inner_height, 0.35).translate(
             (center_x, center_y, inner_bottom_z)
@@ -198,6 +198,7 @@ def _build_container(
             cq=cq,
             outer_width=outer_width,
             outer_depth=outer_depth,
+            body_bottom_z=body_bottom_z,
             center_x=center_x,
             center_y=center_y,
             track_z=track_floor_z,
@@ -404,8 +405,12 @@ def _dutch_style_right_lid_track_cut(
     cut_width = 6.72
     cut_depth = outer_depth - 7.0
     cut_height = body_top_z - track_z + 0.5
-    return cq.Workplane("XY").box(cut_width, cut_depth, cut_height).translate(
-        (center_x + outer_width / 2.0 - 2.0, center_y, track_z + cut_height / 2.0)
+    return (
+        cq.Workplane("XY")
+        .box(cut_width, cut_depth, cut_height)
+        .translate(
+            (center_x + outer_width / 2.0 - 2.0, center_y, track_z + cut_height / 2.0)
+        )
     )
 
 
@@ -414,18 +419,47 @@ def _dutch_style_top_click_features(
     cq,
     outer_width: float,
     outer_depth: float,
+    body_bottom_z: float,
     center_x: float,
     center_y: float,
     track_z: float,
 ):
     track_center_x = center_x + outer_width / 2.0 - 2.0
-    frame_outer = cq.Workplane("XY").box(outer_width - 4.0, outer_depth - 3.411388, 0.2).translate(
-        (center_x + 2.0, center_y, track_z - 0.1)
+    frame_outer_width = outer_width - 4.0
+    frame_outer_depth = outer_depth - 3.411388
+    frame_inner_width = outer_width - 10.725808
+    frame_inner_depth = outer_depth - 7.0
+    frame_center_x = center_x + 2.0
+    inner_center_x = center_x
+    frame_outer = (
+        cq.Workplane("XY")
+        .box(frame_outer_width, frame_outer_depth, 0.2)
+        .translate((frame_center_x, center_y, track_z - 0.1))
     )
-    frame_inner = cq.Workplane("XY").box(outer_width - 10.725808, outer_depth - 7.0, 0.4).translate(
-        (center_x, center_y, track_z - 0.1)
+    frame_inner = (
+        cq.Workplane("XY")
+        .box(frame_inner_width, frame_inner_depth, 0.4)
+        .translate((inner_center_x, center_y, track_z - 0.1))
     )
     track_floor = frame_outer.cut(frame_inner)
+
+    back_support_outer_x = frame_center_x - frame_outer_width / 2.0
+    back_support_inner_x = inner_center_x - frame_inner_width / 2.0
+    back_support_width = back_support_inner_x - back_support_outer_x
+    back_support_center_x = back_support_outer_x + back_support_width / 2.0
+    back_support_height = track_z - body_bottom_z
+    back_support = (
+        cq.Workplane("XY")
+        .box(
+            back_support_width,
+            frame_outer_depth,
+            back_support_height,
+        )
+        .translate(
+            (back_support_center_x, center_y, body_bottom_z + back_support_height / 2.0)
+        )
+    )
+
     center_lug = (
         cq.Workplane("XY", origin=(0.0, 0.0, track_z))
         .center(track_center_x, center_y)
@@ -437,7 +471,7 @@ def _dutch_style_top_click_features(
     except Exception:
         pass
 
-    return track_floor.union(center_lug)
+    return track_floor.union(back_support).union(center_lug)
 
 
 def _add_top_lid_lip(
@@ -451,9 +485,9 @@ def _add_top_lid_lip(
     z: float,
 ):
     lip_height = 0.32
-    outer = _rounded_prism(cq, outer_width - 1.8, outer_depth - 1.8, lip_height, 1.0).translate(
-        (center_x, center_y, z)
-    )
+    outer = _rounded_prism(
+        cq, outer_width - 1.8, outer_depth - 1.8, lip_height, 1.0
+    ).translate((center_x, center_y, z))
     inner = _rounded_prism(
         cq, outer_width - 5.0, outer_depth - 5.0, lip_height + 0.2, 0.6
     ).translate((center_x, center_y, z - 0.1))
@@ -511,8 +545,12 @@ def _logo_background(cq, *, z: float, height: float):
         (-32.4, -14.7),
         (-31.2, -11.2),
     ]
-    background = cq.Workplane("XY").polyline(points).close().extrude(height).translate(
-        (0.0, 0.0, z)
+    background = (
+        cq.Workplane("XY")
+        .polyline(points)
+        .close()
+        .extrude(height)
+        .translate((0.0, 0.0, z))
     )
     try:
         background = background.edges(">Z").fillet(0.45)
@@ -538,7 +576,13 @@ def _crown(cq, *, z: float, height: float, width: float, depth: float):
         (0.0, bottom - 0.4),
         (-half_width * 0.88, bottom - 3.5),
     ]
-    crown = cq.Workplane("XY").polyline(points).close().extrude(height).translate((0.0, 0.0, z))
+    crown = (
+        cq.Workplane("XY")
+        .polyline(points)
+        .close()
+        .extrude(height)
+        .translate((0.0, 0.0, z))
+    )
     try:
         crown = crown.edges(">Z").fillet(0.45)
     except Exception:
@@ -563,7 +607,13 @@ def _ribbon(cq, *, z: float, height: float, width: float, depth: float):
         (-8.0, -half_depth * 0.75),
         (-half_width + 5.4, -half_depth),
     ]
-    ribbon = cq.Workplane("XY").polyline(points).close().extrude(height).translate((0.0, 0.0, z))
+    ribbon = (
+        cq.Workplane("XY")
+        .polyline(points)
+        .close()
+        .extrude(height)
+        .translate((0.0, 0.0, z))
+    )
     try:
         ribbon = ribbon.edges(">Z").fillet(0.6)
     except Exception:
@@ -582,4 +632,6 @@ def _text_options() -> dict[str, str]:
 
 
 def _logo_font_path() -> Path:
-    return Path(str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.ttf")))
+    return Path(
+        str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.ttf"))
+    )

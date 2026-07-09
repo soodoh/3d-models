@@ -6,9 +6,8 @@ from importlib import import_module
 from types import ModuleType
 
 MODEL_MODULES = (
-    "print_models.models.calibration_cube",
-    "print_models.models.dutch_blitz_card_storage_box_parametric",
-    "print_models.models.five_crowns_deck_box",
+    "print_models.models.dutch_blitz_storage_box",
+    "print_models.models.five_crowns_storage_box",
 )
 
 

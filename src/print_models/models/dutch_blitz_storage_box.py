@@ -6,10 +6,8 @@ from collections.abc import Mapping
 from importlib.resources import files
 from pathlib import Path
 
-NAME = "dutch_blitz_card_storage_box_parametric"
-DESCRIPTION = (
-    "Parametric CadQuery Dutch Blitz card storage box with editable lid fit and logo sizing."
-)
+NAME = "dutch_blitz_storage_box"
+DESCRIPTION = "Parametric CadQuery Dutch Blitz card storage box with editable lid fit and logo sizing."
 PARAMETERS = {
     "part": "all",
     "outer_width": 123.0,
@@ -311,7 +309,6 @@ def _lid_dovetail_blank(cq, width: float, bottom_depth: float, height: float):
     return cq.Workplane("YZ").polyline(profile).close().extrude(width / 2.0, both=True)
 
 
-
 def _rounded_prism(cq, width: float, depth: float, height: float, radius: float):
     prism = cq.Workplane("XY").rect(width, depth).extrude(height)
 
@@ -323,10 +320,12 @@ def _rounded_prism(cq, width: float, depth: float, height: float, radius: float)
 
 def _upper_opening_cut(cq, width: float, depth: float, z_min: float, z_max: float):
     height = z_max - z_min
-    return cq.Workplane("XY").rect(width, depth).extrude(height).translate(
-        (0.0, 0.0, z_min)
+    return (
+        cq.Workplane("XY")
+        .rect(width, depth)
+        .extrude(height)
+        .translate((0.0, 0.0, z_min))
     )
-
 
 
 def _card_slot_cut(
@@ -373,7 +372,9 @@ def _card_slot_cut(
     return lower.union(upper)
 
 
-def _side_dovetail_track_cuts(*, cq, outer_width: float, outer_height: float, track_z: float):
+def _side_dovetail_track_cuts(
+    *, cq, outer_width: float, outer_height: float, track_z: float
+):
     groove_bottom_z = track_z - 0.5
     groove_outer_y = 31.294306
     groove_inner_y = 29.0
@@ -411,7 +412,6 @@ def _side_dovetail_track_cuts(*, cq, outer_width: float, outer_height: float, tr
     return positive_cut.union(negative_cut)
 
 
-
 def _right_lid_track_cut(
     *,
     cq,
@@ -423,8 +423,10 @@ def _right_lid_track_cut(
     cut_width = 6.72
     cut_depth = outer_depth - 7.0
     cut_height = outer_height - track_z + 0.5
-    return cq.Workplane("XY").box(cut_width, cut_depth, cut_height).translate(
-        (outer_width / 2.0 - 2.0, 0.0, track_z + cut_height / 2.0)
+    return (
+        cq.Workplane("XY")
+        .box(cut_width, cut_depth, cut_height)
+        .translate((outer_width / 2.0 - 2.0, 0.0, track_z + cut_height / 2.0))
     )
 
 
@@ -436,11 +438,15 @@ def _top_click_features(*, cq, outer_width: float, outer_depth: float, track_z: 
     frame_inner_depth = outer_depth - 7.0
     frame_center_x = 2.0
     inner_center_x = 0.0
-    frame_outer = cq.Workplane("XY").box(frame_outer_width, frame_outer_depth, 0.2).translate(
-        (frame_center_x, 0.0, track_z - 0.1)
+    frame_outer = (
+        cq.Workplane("XY")
+        .box(frame_outer_width, frame_outer_depth, 0.2)
+        .translate((frame_center_x, 0.0, track_z - 0.1))
     )
-    frame_inner = cq.Workplane("XY").box(frame_inner_width, frame_inner_depth, 0.4).translate(
-        (inner_center_x, 0.0, track_z - 0.1)
+    frame_inner = (
+        cq.Workplane("XY")
+        .box(frame_inner_width, frame_inner_depth, 0.4)
+        .translate((inner_center_x, 0.0, track_z - 0.1))
     )
     track_floor = frame_outer.cut(frame_inner)
 
@@ -448,11 +454,15 @@ def _top_click_features(*, cq, outer_width: float, outer_depth: float, track_z: 
     back_support_inner_x = inner_center_x - frame_inner_width / 2.0
     back_support_width = back_support_inner_x - back_support_outer_x
     back_support_center_x = back_support_outer_x + back_support_width / 2.0
-    back_support = cq.Workplane("XY").box(
-        back_support_width,
-        frame_outer_depth,
-        track_z,
-    ).translate((back_support_center_x, 0.0, track_z / 2.0))
+    back_support = (
+        cq.Workplane("XY")
+        .box(
+            back_support_width,
+            frame_outer_depth,
+            track_z,
+        )
+        .translate((back_support_center_x, 0.0, track_z / 2.0))
+    )
 
     lug = (
         cq.Workplane("XY", origin=(0.0, 0.0, track_z))
@@ -601,7 +611,9 @@ def _text_block(
     kind: str,
     line_spacing_factor: float,
 ):
-    lines = [line.strip() for line in text.replace("/", "\n").splitlines() if line.strip()]
+    lines = [
+        line.strip() for line in text.replace("/", "\n").splitlines() if line.strip()
+    ]
     if not lines:
         return cq.Workplane(plane, origin=origin)
 
@@ -635,10 +647,11 @@ def _text_options(font: str, kind: str) -> dict[str, str]:
 
 def _logo_font_path(font: str, kind: str) -> Path | None:
     if font == "Fraunces":
-        return Path(str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.ttf")))
+        return Path(
+            str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.ttf"))
+        )
 
     return None
-
 
 
 def _engrave_lid_text(
