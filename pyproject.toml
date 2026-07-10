@@ -11,6 +11,7 @@ requires-python = ">=3.10,<3.13"
 dependencies = [
   "cadquery>=2.5,<3",
   "cqgridfinity>=0.5.7,<0.6",
+  "pillow>=10,<13",
 ]
 
 [project.scripts]
