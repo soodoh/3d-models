@@ -13,23 +13,20 @@ PARAMETERS = {
     "unit_width": 5,
     "unit_depth": 5,
     "unit_height": 8,
-    "horizontal_dividers_mm": "",
-    "vertical_dividers_mm": "",
-    "horizontal_dividers_u": "",
-    "vertical_dividers_u": "",
+    "horizontal_dividers": "",
+    "vertical_dividers": "",
     "split_width_u": "",
-    "split_depth_u": "",
+    "split_depth": "",
     "wall_thickness_mm": 1.0,
     "divider_thickness_mm": 1.2,
 }
 PRINT_NOTES = (
-    "Divider lists are comma-separated. Horizontal dividers run left-to-right and are "
-    "positioned from the inside front edge along depth. Vertical dividers run "
-    "front-to-back and are positioned from the inside left edge along width. Positions "
-    "locate divider centerlines. *_u values may be decimal units and are multiplied "
-    "by one 42 mm Gridfinity unit. Split positions are comma-separated Gridfinity unit "
-    "positions along the outer width/depth footprint and produce separate open-ended "
-    "parts that can be joined after printing."
+    "Divider lists are comma-separated Gridfinity unit positions. Horizontal dividers "
+    "run left-to-right and are positioned from the inside front edge along depth. "
+    "Vertical dividers run front-to-back and are positioned from the inside left edge "
+    "along width. Positions locate divider centerlines and may be decimal units. Split "
+    "positions are comma-separated Gridfinity unit positions along the outer width/depth "
+    "footprint and produce separate open-ended parts that can be joined after printing."
 )
 
 GRID_UNIT_MM = 42.0
@@ -109,12 +106,10 @@ def build(
     unit_width: int = 5,
     unit_depth: int = 5,
     unit_height: int = 8,
-    horizontal_dividers_mm: str | Sequence[float] = "",
-    vertical_dividers_mm: str | Sequence[float] = "",
-    horizontal_dividers_u: str | Sequence[float] = "",
-    vertical_dividers_u: str | Sequence[float] = "",
+    horizontal_dividers: str | Sequence[float] = "",
+    vertical_dividers: str | Sequence[float] = "",
     split_width_u: str | Sequence[float] = "",
-    split_depth_u: str | Sequence[float] = "",
+    split_depth: str | Sequence[float] = "",
     wall_thickness_mm: float = 1.0,
     divider_thickness_mm: float = 1.2,
 ):
@@ -125,20 +120,20 @@ def build(
     _validate_positive("wall_thickness_mm", wall_thickness_mm)
     _validate_positive("divider_thickness_mm", divider_thickness_mm)
 
-    horizontal_positions_mm = _resolve_positions(
+    horizontal_positions_u = _resolve_divider_positions(
         axis_name="horizontal",
         axis_size_mm=_inner_size(unit_depth, wall_thickness_mm),
         divider_thickness_mm=divider_thickness_mm,
-        millimeter_positions=horizontal_dividers_mm,
-        unit_positions=horizontal_dividers_u,
+        unit_positions=horizontal_dividers,
     )
-    vertical_positions_mm = _resolve_positions(
+    vertical_positions_u = _resolve_divider_positions(
         axis_name="vertical",
         axis_size_mm=_inner_size(unit_width, wall_thickness_mm),
         divider_thickness_mm=divider_thickness_mm,
-        millimeter_positions=vertical_dividers_mm,
-        unit_positions=vertical_dividers_u,
+        unit_positions=vertical_dividers,
     )
+    horizontal_positions_mm = _unit_positions_to_mm(horizontal_positions_u)
+    vertical_positions_mm = _unit_positions_to_mm(vertical_positions_u)
 
     split_width_positions_u = _resolve_split_positions(
         axis_name="width",
@@ -148,7 +143,7 @@ def build(
     split_depth_positions_u = _resolve_split_positions(
         axis_name="depth",
         unit_count=unit_depth,
-        unit_positions=split_depth_u,
+        unit_positions=split_depth,
     )
 
     box = FractionalDividerGridfinityBox(
@@ -161,12 +156,22 @@ def build(
         divider_thickness_mm=divider_thickness_mm,
     )
     rendered_box = box.render()
-    return _split_rendered_box(
+    parts = _split_rendered_box(
         rendered_box,
         split_width_positions_u=split_width_positions_u,
         split_depth_positions_u=split_depth_positions_u,
         unit_width=unit_width,
         unit_depth=unit_depth,
+    )
+    return _named_export_parts(
+        parts,
+        unit_width=unit_width,
+        unit_depth=unit_depth,
+        unit_height=unit_height,
+        horizontal_positions_u=horizontal_positions_u,
+        vertical_positions_u=vertical_positions_u,
+        split_width_positions_u=split_width_positions_u,
+        split_depth_positions_u=split_depth_positions_u,
     )
 
 
@@ -176,29 +181,88 @@ def _inner_size(unit_count: int, wall_thickness_mm: float) -> float:
     return unit_count * GRID_UNIT_MM - GR_TOL - 2 * wall_thickness_mm
 
 
-def _resolve_positions(
+def _resolve_divider_positions(
     *,
     axis_name: str,
     axis_size_mm: float,
     divider_thickness_mm: float,
-    millimeter_positions: str | Sequence[float],
     unit_positions: str | Sequence[float],
 ) -> tuple[float, ...]:
-    resolved_positions = [
-        *_parse_position_list(f"{axis_name}_dividers_mm", millimeter_positions),
-        *(
-            unit_position * GRID_UNIT_MM
-            for unit_position in _parse_position_list(f"{axis_name}_dividers_u", unit_positions)
-        ),
-    ]
-    sorted_positions = tuple(sorted(resolved_positions))
+    sorted_positions_u = tuple(
+        sorted(_parse_position_list(f"{axis_name}_dividers", unit_positions))
+    )
     _validate_positions(
         axis_name=axis_name,
         axis_size_mm=axis_size_mm,
         divider_thickness_mm=divider_thickness_mm,
-        positions_mm=sorted_positions,
+        positions_mm=_unit_positions_to_mm(sorted_positions_u),
     )
-    return sorted_positions
+    return sorted_positions_u
+
+
+def _unit_positions_to_mm(positions_u: tuple[float, ...]) -> tuple[float, ...]:
+    return tuple(position * GRID_UNIT_MM for position in positions_u)
+
+
+def _named_export_parts(
+    parts: dict[str, object],
+    *,
+    unit_width: int,
+    unit_depth: int,
+    unit_height: int,
+    horizontal_positions_u: tuple[float, ...],
+    vertical_positions_u: tuple[float, ...],
+    split_width_positions_u: tuple[float, ...],
+    split_depth_positions_u: tuple[float, ...],
+) -> dict[str, object]:
+    base_name = _export_base_name(
+        unit_width=unit_width,
+        unit_depth=unit_depth,
+        unit_height=unit_height,
+        horizontal_positions_u=horizontal_positions_u,
+        vertical_positions_u=vertical_positions_u,
+        split_width_positions_u=split_width_positions_u,
+        split_depth_positions_u=split_depth_positions_u,
+    )
+
+    if set(parts) == {"whole"}:
+        return {base_name: parts["whole"]}
+
+    return {f"{base_name}_{part_name}": part for part_name, part in parts.items()}
+
+
+def _export_base_name(
+    *,
+    unit_width: int,
+    unit_depth: int,
+    unit_height: int,
+    horizontal_positions_u: tuple[float, ...],
+    vertical_positions_u: tuple[float, ...],
+    split_width_positions_u: tuple[float, ...],
+    split_depth_positions_u: tuple[float, ...],
+) -> str:
+    name_parts = [f"{unit_width}x{unit_depth}x{unit_height}u"]
+
+    if horizontal_positions_u:
+        horizontal_label = _format_positions(horizontal_positions_u)
+        name_parts.append(f"horizontal_dividers_{horizontal_label}u")
+    if vertical_positions_u:
+        vertical_label = _format_positions(vertical_positions_u)
+        name_parts.append(f"vertical_dividers_{vertical_label}u")
+    if split_width_positions_u:
+        name_parts.append(f"split_width_{_format_positions(split_width_positions_u)}u")
+    if split_depth_positions_u:
+        name_parts.append(f"split_depth_{_format_positions(split_depth_positions_u)}u")
+
+    return "_".join(name_parts)
+
+
+def _format_positions(positions: tuple[float, ...]) -> str:
+    return "_".join(_format_decimal(position) for position in positions)
+
+
+def _format_decimal(value: float) -> str:
+    return f"{value:g}".replace(".", "p")
 
 
 def _resolve_split_positions(
@@ -207,9 +271,10 @@ def _resolve_split_positions(
     unit_count: int,
     unit_positions: str | Sequence[float],
 ) -> tuple[float, ...]:
-    positions = tuple(sorted(_parse_position_list(f"split_{axis_name}_u", unit_positions)))
+    parameter_name = "split_width_u" if axis_name == "width" else "split_depth"
+    positions = tuple(sorted(_parse_position_list(parameter_name, unit_positions)))
     _validate_split_positions(
-        axis_name=axis_name,
+        parameter_name=parameter_name,
         unit_count=unit_count,
         positions_u=positions,
     )
@@ -225,7 +290,7 @@ def _split_rendered_box(
     unit_depth: int,
 ):
     if not split_width_positions_u and not split_depth_positions_u:
-        return rendered_box
+        return {"whole": rendered_box}
 
     import cadquery as cq
 
@@ -311,14 +376,14 @@ def _split_part_name(
 
 def _validate_split_positions(
     *,
-    axis_name: str,
+    parameter_name: str,
     unit_count: int,
     positions_u: tuple[float, ...],
 ) -> None:
     for position in positions_u:
         if position <= 0 or position >= unit_count:
             raise ValueError(
-                f"split_{axis_name}_u position {position:g}U is outside the footprint. "
+                f"{parameter_name} position {position:g}U is outside the footprint. "
                 f"Split positions must be greater than 0U and less than {unit_count:g}U."
             )
 
@@ -327,7 +392,7 @@ def _validate_split_positions(
     ):
         if current_position <= previous_position + POSITION_TOLERANCE_MM / GRID_UNIT_MM:
             raise ValueError(
-                f"split_{axis_name}_u positions {previous_position:g}U and "
+                f"{parameter_name} positions {previous_position:g}U and "
                 f"{current_position:g}U overlap or duplicate each other."
             )
 
