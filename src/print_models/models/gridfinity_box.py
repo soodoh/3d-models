@@ -17,6 +17,8 @@ PARAMETERS = {
     "vertical_dividers_mm": "",
     "horizontal_dividers_u": "",
     "vertical_dividers_u": "",
+    "split_width_u": "",
+    "split_depth_u": "",
     "wall_thickness_mm": 1.0,
     "divider_thickness_mm": 1.2,
 }
@@ -25,7 +27,9 @@ PRINT_NOTES = (
     "positioned from the inside front edge along depth. Vertical dividers run "
     "front-to-back and are positioned from the inside left edge along width. Positions "
     "locate divider centerlines. *_u values may be decimal units and are multiplied "
-    "by one 42 mm Gridfinity unit."
+    "by one 42 mm Gridfinity unit. Split positions are comma-separated Gridfinity unit "
+    "positions along the outer width/depth footprint and produce separate open-ended "
+    "parts that can be joined after printing."
 )
 
 GRID_UNIT_MM = 42.0
@@ -109,6 +113,8 @@ def build(
     vertical_dividers_mm: str | Sequence[float] = "",
     horizontal_dividers_u: str | Sequence[float] = "",
     vertical_dividers_u: str | Sequence[float] = "",
+    split_width_u: str | Sequence[float] = "",
+    split_depth_u: str | Sequence[float] = "",
     wall_thickness_mm: float = 1.0,
     divider_thickness_mm: float = 1.2,
 ):
@@ -134,6 +140,17 @@ def build(
         unit_positions=vertical_dividers_u,
     )
 
+    split_width_positions_u = _resolve_split_positions(
+        axis_name="width",
+        unit_count=unit_width,
+        unit_positions=split_width_u,
+    )
+    split_depth_positions_u = _resolve_split_positions(
+        axis_name="depth",
+        unit_count=unit_depth,
+        unit_positions=split_depth_u,
+    )
+
     box = FractionalDividerGridfinityBox(
         unit_width=unit_width,
         unit_depth=unit_depth,
@@ -143,7 +160,14 @@ def build(
         wall_thickness_mm=wall_thickness_mm,
         divider_thickness_mm=divider_thickness_mm,
     )
-    return box.render()
+    rendered_box = box.render()
+    return _split_rendered_box(
+        rendered_box,
+        split_width_positions_u=split_width_positions_u,
+        split_depth_positions_u=split_depth_positions_u,
+        unit_width=unit_width,
+        unit_depth=unit_depth,
+    )
 
 
 def _inner_size(unit_count: int, wall_thickness_mm: float) -> float:
@@ -175,6 +199,137 @@ def _resolve_positions(
         positions_mm=sorted_positions,
     )
     return sorted_positions
+
+
+def _resolve_split_positions(
+    *,
+    axis_name: str,
+    unit_count: int,
+    unit_positions: str | Sequence[float],
+) -> tuple[float, ...]:
+    positions = tuple(sorted(_parse_position_list(f"split_{axis_name}_u", unit_positions)))
+    _validate_split_positions(
+        axis_name=axis_name,
+        unit_count=unit_count,
+        positions_u=positions,
+    )
+    return positions
+
+
+def _split_rendered_box(
+    rendered_box,
+    *,
+    split_width_positions_u: tuple[float, ...],
+    split_depth_positions_u: tuple[float, ...],
+    unit_width: int,
+    unit_depth: int,
+):
+    if not split_width_positions_u and not split_depth_positions_u:
+        return rendered_box
+
+    import cadquery as cq
+
+    bounding_box = rendered_box.val().BoundingBox()
+    width_segments = _axis_segments(
+        minimum=bounding_box.xmin,
+        maximum=bounding_box.xmax,
+        unit_count=unit_width,
+        split_positions_u=split_width_positions_u,
+    )
+    depth_segments = _axis_segments(
+        minimum=bounding_box.ymin,
+        maximum=bounding_box.ymax,
+        unit_count=unit_depth,
+        split_positions_u=split_depth_positions_u,
+    )
+
+    padding_mm = 2.0
+    z_size = bounding_box.zlen + 2 * padding_mm
+    z_center = bounding_box.zmin + bounding_box.zlen / 2.0
+    parts = {}
+
+    for width_index, width_segment in enumerate(width_segments, start=1):
+        width_minimum, width_maximum = width_segment
+        for depth_index, depth_segment in enumerate(depth_segments, start=1):
+            depth_minimum, depth_maximum = depth_segment
+            cutter = (
+                cq.Workplane("XY")
+                .box(
+                    width_maximum - width_minimum,
+                    depth_maximum - depth_minimum,
+                    z_size,
+                )
+                .translate(
+                    (
+                        width_minimum + (width_maximum - width_minimum) / 2.0,
+                        depth_minimum + (depth_maximum - depth_minimum) / 2.0,
+                        z_center,
+                    )
+                )
+            )
+            part_name = _split_part_name(
+                width_index=width_index,
+                width_count=len(width_segments),
+                depth_index=depth_index,
+                depth_count=len(depth_segments),
+            )
+            parts[part_name] = rendered_box.intersect(cutter)
+
+    return parts
+
+
+def _axis_segments(
+    *,
+    minimum: float,
+    maximum: float,
+    unit_count: int,
+    split_positions_u: tuple[float, ...],
+) -> tuple[tuple[float, float], ...]:
+    axis_size = maximum - minimum
+    split_coordinates = tuple(
+        minimum + axis_size * split_position_u / unit_count
+        for split_position_u in split_positions_u
+    )
+    coordinates = (minimum, *split_coordinates, maximum)
+    return tuple(zip(coordinates, coordinates[1:], strict=False))
+
+
+def _split_part_name(
+    *,
+    width_index: int,
+    width_count: int,
+    depth_index: int,
+    depth_count: int,
+) -> str:
+    name_parts = []
+    if width_count > 1:
+        name_parts.append(f"width_{width_index}_of_{width_count}")
+    if depth_count > 1:
+        name_parts.append(f"depth_{depth_index}_of_{depth_count}")
+    return "_".join(name_parts) or "whole"
+
+
+def _validate_split_positions(
+    *,
+    axis_name: str,
+    unit_count: int,
+    positions_u: tuple[float, ...],
+) -> None:
+    for position in positions_u:
+        if position <= 0 or position >= unit_count:
+            raise ValueError(
+                f"split_{axis_name}_u position {position:g}U is outside the footprint. "
+                f"Split positions must be greater than 0U and less than {unit_count:g}U."
+            )
+
+    for previous_position, current_position in zip(
+        positions_u, positions_u[1:], strict=False
+    ):
+        if current_position <= previous_position + POSITION_TOLERANCE_MM / GRID_UNIT_MM:
+            raise ValueError(
+                f"split_{axis_name}_u positions {previous_position:g}U and "
+                f"{current_position:g}U overlap or duplicate each other."
+            )
 
 
 def _parse_position_list(
