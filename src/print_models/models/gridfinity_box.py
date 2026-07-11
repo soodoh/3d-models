@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 
 NAME = "gridfinity_box"
 DESCRIPTION = (
@@ -21,13 +22,25 @@ PARAMETERS = {
     "divider_thickness_mm": 1.2,
 }
 PRINT_NOTES = (
-    "Divider lists are comma-separated Gridfinity unit positions. Horizontal dividers "
-    "run left-to-right and are positioned from the inside front edge along depth. "
-    "Vertical dividers run front-to-back and are positioned from the inside left edge "
-    "along width. Positions locate divider centerlines and may be decimal units. Split "
-    "positions are comma-separated Gridfinity unit positions along the outer width/depth "
-    "footprint and produce separate open-ended parts that can be joined after printing."
+    "Divider lists are comma-separated Gridfinity unit specs. Use either position for a "
+    "full divider or position@span_start-span_end for a partial divider. Horizontal "
+    "dividers run left-to-right and are positioned from the inside front edge along "
+    "depth; their optional span is along width. Vertical dividers run front-to-back and "
+    "are positioned from the inside left edge along width; their optional span is along "
+    "depth. Positions and spans may be decimal units. Split positions are comma-separated "
+    "Gridfinity unit positions along the outer width/depth footprint and produce "
+    "separate open-ended parts that can be joined after printing."
 )
+
+
+@dataclass(frozen=True)
+class DividerSpec:
+    """One divider centerline with an optional span along the opposite axis."""
+
+    position_u: float
+    span_start_u: float
+    span_end_u: float
+
 
 GRID_UNIT_MM = 42.0
 POSITION_TOLERANCE_MM = 1e-6
@@ -42,8 +55,8 @@ class FractionalDividerGridfinityBox:
         unit_width: int,
         unit_depth: int,
         unit_height: int,
-        horizontal_positions_mm: tuple[float, ...],
-        vertical_positions_mm: tuple[float, ...],
+        horizontal_specs: tuple[DividerSpec, ...],
+        vertical_specs: tuple[DividerSpec, ...],
         wall_thickness_mm: float,
         divider_thickness_mm: float,
     ) -> None:
@@ -51,41 +64,86 @@ class FractionalDividerGridfinityBox:
 
         class CustomGridfinityBox(GridfinityBox):
             def __init__(self, *args, **kwargs):
-                self.custom_horizontal_positions_mm = horizontal_positions_mm
-                self.custom_vertical_positions_mm = vertical_positions_mm
+                self.custom_horizontal_specs = horizontal_specs
+                self.custom_vertical_specs = vertical_specs
                 self.custom_divider_thickness_mm = divider_thickness_mm
                 super().__init__(*args, **kwargs)
 
             @property
             def has_dividers(self):
-                return bool(
-                    self.custom_horizontal_positions_mm or self.custom_vertical_positions_mm
-                )
+                return bool(self.custom_horizontal_specs or self.custom_vertical_specs)
 
             def render_dividers(self):
                 import cadquery as cq
 
                 result = None
 
-                for x_position in self.custom_vertical_positions_mm:
+                for divider_spec in self.custom_vertical_specs:
+                    y_center, y_length = self.divider_span_center_and_length(
+                        span_start_u=divider_spec.span_start_u,
+                        span_end_u=divider_spec.span_end_u,
+                        axis_unit_count=self.width_u,
+                        outer_axis_size=self.outer_w,
+                        half_axis=self.half_w,
+                    )
                     wall = (
                         cq.Workplane("XY")
-                        .rect(self.custom_divider_thickness_mm, self.outer_w)
+                        .rect(self.custom_divider_thickness_mm, y_length)
                         .extrude(self.max_height)
-                        .translate((x_position - self.half_in, self.half_w, self.floor_h))
+                        .translate(
+                            (
+                                divider_spec.position_u * GRID_UNIT_MM - self.half_in,
+                                y_center,
+                                self.floor_h,
+                            )
+                        )
                     )
                     result = wall if result is None else result.union(wall)
 
-                for y_position in self.custom_horizontal_positions_mm:
+                for divider_spec in self.custom_horizontal_specs:
+                    x_center, x_length = self.divider_span_center_and_length(
+                        span_start_u=divider_spec.span_start_u,
+                        span_end_u=divider_spec.span_end_u,
+                        axis_unit_count=self.length_u,
+                        outer_axis_size=self.outer_l,
+                        half_axis=self.half_l,
+                    )
                     wall = (
                         cq.Workplane("XY")
-                        .rect(self.outer_l, self.custom_divider_thickness_mm)
+                        .rect(x_length, self.custom_divider_thickness_mm)
                         .extrude(self.max_height)
-                        .translate((self.half_l, y_position - self.half_in, self.floor_h))
+                        .translate(
+                            (
+                                x_center,
+                                divider_spec.position_u * GRID_UNIT_MM - self.half_in,
+                                self.floor_h,
+                            )
+                        )
                     )
                     result = wall if result is None else result.union(wall)
 
                 return result
+
+            def divider_span_center_and_length(
+                self,
+                *,
+                span_start_u,
+                span_end_u,
+                axis_unit_count,
+                outer_axis_size,
+                half_axis,
+            ):
+                if span_start_u == 0:
+                    span_start = half_axis - outer_axis_size / 2.0
+                else:
+                    span_start = span_start_u * GRID_UNIT_MM - self.half_in
+
+                if span_end_u == axis_unit_count:
+                    span_end = half_axis + outer_axis_size / 2.0
+                else:
+                    span_end = span_end_u * GRID_UNIT_MM - self.half_in
+
+                return span_start + (span_end - span_start) / 2.0, span_end - span_start
 
         self.box = CustomGridfinityBox(
             unit_width,
@@ -95,6 +153,12 @@ class FractionalDividerGridfinityBox:
             scoops=False,
             labels=False,
             no_lip=False,
+            fillet_interior=not _has_partial_dividers(
+                horizontal_specs=horizontal_specs,
+                vertical_specs=vertical_specs,
+                unit_width=unit_width,
+                unit_depth=unit_depth,
+            ),
             wall_th=wall_thickness_mm,
         )
 
@@ -120,20 +184,20 @@ def build(
     _validate_positive("wall_thickness_mm", wall_thickness_mm)
     _validate_positive("divider_thickness_mm", divider_thickness_mm)
 
-    horizontal_positions_u = _resolve_divider_positions(
+    horizontal_specs = _resolve_divider_specs(
         axis_name="horizontal",
-        axis_size_mm=_inner_size(unit_depth, wall_thickness_mm),
+        position_axis_size_mm=_inner_size(unit_depth, wall_thickness_mm),
+        span_axis_units=unit_width,
         divider_thickness_mm=divider_thickness_mm,
-        unit_positions=horizontal_dividers,
+        raw_specs=horizontal_dividers,
     )
-    vertical_positions_u = _resolve_divider_positions(
+    vertical_specs = _resolve_divider_specs(
         axis_name="vertical",
-        axis_size_mm=_inner_size(unit_width, wall_thickness_mm),
+        position_axis_size_mm=_inner_size(unit_width, wall_thickness_mm),
+        span_axis_units=unit_depth,
         divider_thickness_mm=divider_thickness_mm,
-        unit_positions=vertical_dividers,
+        raw_specs=vertical_dividers,
     )
-    horizontal_positions_mm = _unit_positions_to_mm(horizontal_positions_u)
-    vertical_positions_mm = _unit_positions_to_mm(vertical_positions_u)
 
     split_width_positions_u = _resolve_split_positions(
         axis_name="width",
@@ -150,8 +214,8 @@ def build(
         unit_width=unit_width,
         unit_depth=unit_depth,
         unit_height=unit_height,
-        horizontal_positions_mm=horizontal_positions_mm,
-        vertical_positions_mm=vertical_positions_mm,
+        horizontal_specs=horizontal_specs,
+        vertical_specs=vertical_specs,
         wall_thickness_mm=wall_thickness_mm,
         divider_thickness_mm=divider_thickness_mm,
     )
@@ -168,8 +232,8 @@ def build(
         unit_width=unit_width,
         unit_depth=unit_depth,
         unit_height=unit_height,
-        horizontal_positions_u=horizontal_positions_u,
-        vertical_positions_u=vertical_positions_u,
+        horizontal_specs=horizontal_specs,
+        vertical_specs=vertical_specs,
         split_width_positions_u=split_width_positions_u,
         split_depth_positions_u=split_depth_positions_u,
     )
@@ -181,27 +245,114 @@ def _inner_size(unit_count: int, wall_thickness_mm: float) -> float:
     return unit_count * GRID_UNIT_MM - GR_TOL - 2 * wall_thickness_mm
 
 
-def _resolve_divider_positions(
+def _has_partial_dividers(
+    *,
+    horizontal_specs: tuple[DividerSpec, ...],
+    vertical_specs: tuple[DividerSpec, ...],
+    unit_width: int,
+    unit_depth: int,
+) -> bool:
+    return any(
+        not _is_full_span(divider_spec, unit_width) for divider_spec in horizontal_specs
+    ) or any(not _is_full_span(divider_spec, unit_depth) for divider_spec in vertical_specs)
+
+
+def _is_full_span(divider_spec: DividerSpec, full_span_axis_units: int) -> bool:
+    return divider_spec.span_start_u == 0 and divider_spec.span_end_u == full_span_axis_units
+
+
+def _resolve_divider_specs(
     *,
     axis_name: str,
-    axis_size_mm: float,
+    position_axis_size_mm: float,
+    span_axis_units: int,
     divider_thickness_mm: float,
-    unit_positions: str | Sequence[float],
-) -> tuple[float, ...]:
-    sorted_positions_u = tuple(
-        sorted(_parse_position_list(f"{axis_name}_dividers", unit_positions))
+    raw_specs: str | Sequence[float],
+) -> tuple[DividerSpec, ...]:
+    parameter_name = f"{axis_name}_dividers"
+    divider_specs = tuple(
+        sorted(
+            _parse_divider_specs(parameter_name, raw_specs, span_axis_units),
+            key=lambda spec: (spec.position_u, spec.span_start_u, spec.span_end_u),
+        )
     )
-    _validate_positions(
+    _validate_divider_specs(
         axis_name=axis_name,
-        axis_size_mm=axis_size_mm,
+        position_axis_size_mm=position_axis_size_mm,
+        span_axis_units=span_axis_units,
         divider_thickness_mm=divider_thickness_mm,
-        positions_mm=_unit_positions_to_mm(sorted_positions_u),
+        divider_specs=divider_specs,
     )
-    return sorted_positions_u
+    return divider_specs
 
 
-def _unit_positions_to_mm(positions_u: tuple[float, ...]) -> tuple[float, ...]:
-    return tuple(position * GRID_UNIT_MM for position in positions_u)
+def _parse_divider_specs(
+    parameter_name: str,
+    raw_specs: str | Sequence[float],
+    full_span_axis_units: int,
+) -> tuple[DividerSpec, ...]:
+    if isinstance(raw_specs, str):
+        stripped_specs = raw_specs.strip()
+        if not stripped_specs:
+            return ()
+
+        divider_specs = []
+        for raw_spec in stripped_specs.split(","):
+            stripped_spec = raw_spec.strip()
+            if not stripped_spec:
+                raise ValueError(f"{parameter_name} contains an empty divider spec.")
+            divider_specs.append(
+                _parse_divider_spec(parameter_name, stripped_spec, full_span_axis_units)
+            )
+        return tuple(divider_specs)
+
+    if isinstance(raw_specs, Iterable):
+        return tuple(
+            DividerSpec(
+                position_u=float(position_u),
+                span_start_u=0.0,
+                span_end_u=float(full_span_axis_units),
+            )
+            for position_u in raw_specs
+        )
+
+    raise ValueError(f"{parameter_name} must be a comma-separated string or a sequence.")
+
+
+def _parse_divider_spec(
+    parameter_name: str,
+    raw_spec: str,
+    full_span_axis_units: int,
+) -> DividerSpec:
+    raw_position, span_separator, raw_span = raw_spec.partition("@")
+    stripped_position = raw_position.strip()
+    if not stripped_position:
+        raise ValueError(f"{parameter_name} contains a divider spec without a position.")
+
+    if not span_separator:
+        return DividerSpec(
+            position_u=float(stripped_position),
+            span_start_u=0.0,
+            span_end_u=float(full_span_axis_units),
+        )
+
+    raw_span_start, range_separator, raw_span_end = raw_span.partition("-")
+    if not range_separator:
+        raise ValueError(
+            f"{parameter_name} divider spec {raw_spec!r} must use span_start-span_end "
+            "after '@'."
+        )
+
+    stripped_span_start = raw_span_start.strip()
+    stripped_span_end = raw_span_end.strip()
+    if not stripped_span_start or not stripped_span_end:
+        raise ValueError(f"{parameter_name} divider spec {raw_spec!r} has an empty span bound.")
+
+    return DividerSpec(
+        position_u=float(stripped_position),
+        span_start_u=float(stripped_span_start),
+        span_end_u=float(stripped_span_end),
+    )
 
 
 def _named_export_parts(
@@ -210,8 +361,8 @@ def _named_export_parts(
     unit_width: int,
     unit_depth: int,
     unit_height: int,
-    horizontal_positions_u: tuple[float, ...],
-    vertical_positions_u: tuple[float, ...],
+    horizontal_specs: tuple[DividerSpec, ...],
+    vertical_specs: tuple[DividerSpec, ...],
     split_width_positions_u: tuple[float, ...],
     split_depth_positions_u: tuple[float, ...],
 ) -> dict[str, object]:
@@ -219,8 +370,8 @@ def _named_export_parts(
         unit_width=unit_width,
         unit_depth=unit_depth,
         unit_height=unit_height,
-        horizontal_positions_u=horizontal_positions_u,
-        vertical_positions_u=vertical_positions_u,
+        horizontal_specs=horizontal_specs,
+        vertical_specs=vertical_specs,
         split_width_positions_u=split_width_positions_u,
         split_depth_positions_u=split_depth_positions_u,
     )
@@ -236,18 +387,18 @@ def _export_base_name(
     unit_width: int,
     unit_depth: int,
     unit_height: int,
-    horizontal_positions_u: tuple[float, ...],
-    vertical_positions_u: tuple[float, ...],
+    horizontal_specs: tuple[DividerSpec, ...],
+    vertical_specs: tuple[DividerSpec, ...],
     split_width_positions_u: tuple[float, ...],
     split_depth_positions_u: tuple[float, ...],
 ) -> str:
     name_parts = [f"{unit_width}x{unit_depth}x{unit_height}u"]
 
-    if horizontal_positions_u:
-        horizontal_label = _format_positions(horizontal_positions_u)
+    if horizontal_specs:
+        horizontal_label = _format_divider_specs(horizontal_specs, unit_width)
         name_parts.append(f"horizontal_dividers_{horizontal_label}u")
-    if vertical_positions_u:
-        vertical_label = _format_positions(vertical_positions_u)
+    if vertical_specs:
+        vertical_label = _format_divider_specs(vertical_specs, unit_depth)
         name_parts.append(f"vertical_dividers_{vertical_label}u")
     if split_width_positions_u:
         name_parts.append(f"split_width_{_format_positions(split_width_positions_u)}u")
@@ -255,6 +406,25 @@ def _export_base_name(
         name_parts.append(f"split_depth_{_format_positions(split_depth_positions_u)}u")
 
     return "_".join(name_parts)
+
+
+def _format_divider_specs(
+    divider_specs: tuple[DividerSpec, ...], full_span_axis_units: int
+) -> str:
+    return "_".join(
+        _format_divider_spec(divider_spec, full_span_axis_units)
+        for divider_spec in divider_specs
+    )
+
+
+def _format_divider_spec(divider_spec: DividerSpec, full_span_axis_units: int) -> str:
+    position = _format_decimal(divider_spec.position_u)
+    if _is_full_span(divider_spec, full_span_axis_units):
+        return position
+
+    span_start = _format_decimal(divider_spec.span_start_u)
+    span_end = _format_decimal(divider_spec.span_end_u)
+    return f"{position}at{span_start}to{span_end}"
 
 
 def _format_positions(positions: tuple[float, ...]) -> str:
@@ -419,34 +589,58 @@ def _parse_position_list(
     raise ValueError(f"{parameter_name} must be a comma-separated string or a sequence.")
 
 
-def _validate_positions(
+def _validate_divider_specs(
     *,
     axis_name: str,
-    axis_size_mm: float,
+    position_axis_size_mm: float,
+    span_axis_units: int,
     divider_thickness_mm: float,
-    positions_mm: tuple[float, ...],
+    divider_specs: tuple[DividerSpec, ...],
 ) -> None:
     minimum_center = divider_thickness_mm / 2.0
-    maximum_center = axis_size_mm - divider_thickness_mm / 2.0
+    maximum_center = position_axis_size_mm - divider_thickness_mm / 2.0
 
-    for position in positions_mm:
-        if position < minimum_center or position > maximum_center:
+    for divider_spec in divider_specs:
+        position_mm = divider_spec.position_u * GRID_UNIT_MM
+        if position_mm < minimum_center or position_mm > maximum_center:
             raise ValueError(
-                f"{axis_name} divider at {position:g} mm is outside the usable cavity. "
-                f"Centerline positions must be between {minimum_center:g} mm and "
-                f"{maximum_center:g} mm."
+                f"{axis_name} divider at {divider_spec.position_u:g}U is outside the "
+                "usable cavity. Centerline positions must be between "
+                f"{minimum_center / GRID_UNIT_MM:g}U and "
+                f"{maximum_center / GRID_UNIT_MM:g}U."
             )
 
-    for previous_position, current_position in zip(
-        positions_mm, positions_mm[1:], strict=False
-    ):
-        distance = current_position - previous_position
-        if distance <= divider_thickness_mm + POSITION_TOLERANCE_MM:
+        if divider_spec.span_start_u < 0 or divider_spec.span_end_u > span_axis_units:
             raise ValueError(
-                f"{axis_name} dividers at {previous_position:g} mm and {current_position:g} mm "
-                f"overlap or duplicate each other. Centerlines must be more than "
-                f"{divider_thickness_mm:g} mm apart."
+                f"{axis_name} divider span {divider_spec.span_start_u:g}-"
+                f"{divider_spec.span_end_u:g}U is outside the opposite axis. Spans must "
+                f"stay between 0U and {span_axis_units:g}U."
             )
+
+        if divider_spec.span_start_u >= divider_spec.span_end_u:
+            raise ValueError(
+                f"{axis_name} divider span {divider_spec.span_start_u:g}-"
+                f"{divider_spec.span_end_u:g}U must have a start less than its end."
+            )
+
+    for previous_index, previous_spec in enumerate(divider_specs):
+        for current_spec in divider_specs[previous_index + 1 :]:
+            distance_mm = abs(current_spec.position_u - previous_spec.position_u) * GRID_UNIT_MM
+            if (
+                distance_mm <= divider_thickness_mm + POSITION_TOLERANCE_MM
+                and _divider_spans_overlap(previous_spec, current_spec)
+            ):
+                raise ValueError(
+                    f"{axis_name} dividers at {previous_spec.position_u:g}U and "
+                    f"{current_spec.position_u:g}U overlap or duplicate each other over "
+                    "the same span."
+                )
+
+
+def _divider_spans_overlap(first_spec: DividerSpec, second_spec: DividerSpec) -> bool:
+    return max(first_spec.span_start_u, second_spec.span_start_u) < min(
+        first_spec.span_end_u, second_spec.span_end_u
+    )
 
 
 def _validate_unit_count(name: str, value: int) -> None:
