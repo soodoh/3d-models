@@ -18,6 +18,8 @@ PARAMETERS = {
     "vertical_dividers": "",
     "split_width_u": "",
     "split_depth": "",
+    "raised_floors": "",
+    "scoops": False,
     "wall_thickness_mm": 1.0,
     "divider_thickness_mm": 1.2,
 }
@@ -29,7 +31,8 @@ PRINT_NOTES = (
     "are positioned from the inside left edge along width; their optional span is along "
     "depth. Positions and spans may be decimal units. Split positions are comma-separated "
     "Gridfinity unit positions along the outer width/depth footprint and produce "
-    "separate open-ended parts that can be joined after printing."
+    "separate open-ended parts that can be joined after printing. Raised floor specs use "
+    "x_start-x_end@y_start-y_end:height_mm."
 )
 
 
@@ -40,6 +43,17 @@ class DividerSpec:
     position_u: float
     span_start_u: float
     span_end_u: float
+
+
+@dataclass(frozen=True)
+class RaisedFloorSpec:
+    """One raised floor region expressed in Gridfinity units and millimeters."""
+
+    x_start_u: float
+    x_end_u: float
+    y_start_u: float
+    y_end_u: float
+    height_mm: float
 
 
 GRID_UNIT_MM = 42.0
@@ -59,6 +73,7 @@ class FractionalDividerGridfinityBox:
         vertical_specs: tuple[DividerSpec, ...],
         wall_thickness_mm: float,
         divider_thickness_mm: float,
+        scoops: bool,
     ) -> None:
         from cqgridfinity import GridfinityBox
 
@@ -150,7 +165,7 @@ class FractionalDividerGridfinityBox:
             unit_depth,
             unit_height,
             holes=False,
-            scoops=False,
+            scoops=scoops,
             labels=False,
             no_lip=False,
             fillet_interior=not _has_partial_dividers(
@@ -174,6 +189,8 @@ def build(
     vertical_dividers: str | Sequence[float] = "",
     split_width_u: str | Sequence[float] = "",
     split_depth: str | Sequence[float] = "",
+    raised_floors: str | Sequence[RaisedFloorSpec] = "",
+    scoops: bool = False,
     wall_thickness_mm: float = 1.0,
     divider_thickness_mm: float = 1.2,
 ):
@@ -209,6 +226,11 @@ def build(
         unit_count=unit_depth,
         unit_positions=split_depth,
     )
+    raised_floor_specs = _resolve_raised_floor_specs(
+        raw_specs=raised_floors,
+        unit_width=unit_width,
+        unit_depth=unit_depth,
+    )
 
     box = FractionalDividerGridfinityBox(
         unit_width=unit_width,
@@ -218,8 +240,13 @@ def build(
         vertical_specs=vertical_specs,
         wall_thickness_mm=wall_thickness_mm,
         divider_thickness_mm=divider_thickness_mm,
+        scoops=scoops,
     )
-    rendered_box = box.render()
+    rendered_box = _apply_raised_floors(
+        box.render(),
+        raised_floor_specs=raised_floor_specs,
+        wall_thickness_mm=wall_thickness_mm,
+    )
     parts = _split_rendered_box(
         rendered_box,
         split_width_positions_u=split_width_positions_u,
@@ -236,6 +263,8 @@ def build(
         vertical_specs=vertical_specs,
         split_width_positions_u=split_width_positions_u,
         split_depth_positions_u=split_depth_positions_u,
+        raised_floor_specs=raised_floor_specs,
+        scoops=scoops,
     )
 
 
@@ -243,6 +272,162 @@ def _inner_size(unit_count: int, wall_thickness_mm: float) -> float:
     from cqgridfinity import GR_TOL
 
     return unit_count * GRID_UNIT_MM - GR_TOL - 2 * wall_thickness_mm
+
+
+def _resolve_raised_floor_specs(
+    *,
+    raw_specs: str | Sequence[RaisedFloorSpec],
+    unit_width: int,
+    unit_depth: int,
+) -> tuple[RaisedFloorSpec, ...]:
+    if isinstance(raw_specs, str):
+        stripped_specs = raw_specs.strip()
+        if not stripped_specs:
+            return ()
+
+        raised_floor_specs = []
+        for raw_spec in stripped_specs.split(","):
+            stripped_spec = raw_spec.strip()
+            if not stripped_spec:
+                raise ValueError("raised_floors contains an empty raised floor spec.")
+            raised_floor_specs.append(_parse_raised_floor_spec(stripped_spec))
+    elif isinstance(raw_specs, Iterable):
+        raised_floor_specs = list(raw_specs)
+    else:
+        raise ValueError("raised_floors must be a comma-separated string or a sequence.")
+
+    resolved_specs = tuple(raised_floor_specs)
+    _validate_raised_floor_specs(
+        raised_floor_specs=resolved_specs,
+        unit_width=unit_width,
+        unit_depth=unit_depth,
+    )
+    return resolved_specs
+
+
+def _parse_raised_floor_spec(raw_spec: str) -> RaisedFloorSpec:
+    raw_footprint, height_separator, raw_height = raw_spec.partition(":")
+    if not height_separator:
+        raise ValueError(
+            f"raised_floors spec {raw_spec!r} must use x_start-x_end@y_start-y_end:height_mm."
+        )
+
+    raw_x_span, footprint_separator, raw_y_span = raw_footprint.partition("@")
+    if not footprint_separator:
+        raise ValueError(
+            f"raised_floors spec {raw_spec!r} must use x_start-x_end@y_start-y_end:height_mm."
+        )
+
+    x_start_u, x_end_u = _parse_unit_span("raised_floors x span", raw_x_span)
+    y_start_u, y_end_u = _parse_unit_span("raised_floors y span", raw_y_span)
+    return RaisedFloorSpec(
+        x_start_u=x_start_u,
+        x_end_u=x_end_u,
+        y_start_u=y_start_u,
+        y_end_u=y_end_u,
+        height_mm=float(raw_height.strip()),
+    )
+
+
+def _parse_unit_span(parameter_name: str, raw_span: str) -> tuple[float, float]:
+    raw_start, span_separator, raw_end = raw_span.partition("-")
+    if not span_separator:
+        raise ValueError(f"{parameter_name} must use start-end syntax.")
+
+    stripped_start = raw_start.strip()
+    stripped_end = raw_end.strip()
+    if not stripped_start or not stripped_end:
+        raise ValueError(f"{parameter_name} contains an empty span bound.")
+
+    return float(stripped_start), float(stripped_end)
+
+
+def _validate_raised_floor_specs(
+    *,
+    raised_floor_specs: tuple[RaisedFloorSpec, ...],
+    unit_width: int,
+    unit_depth: int,
+) -> None:
+    for raised_floor_spec in raised_floor_specs:
+        if raised_floor_spec.x_start_u < 0 or raised_floor_spec.x_end_u > unit_width:
+            raise ValueError(
+                f"raised_floors x span {raised_floor_spec.x_start_u:g}-"
+                f"{raised_floor_spec.x_end_u:g}U is outside 0-{unit_width:g}U."
+            )
+        if raised_floor_spec.y_start_u < 0 or raised_floor_spec.y_end_u > unit_depth:
+            raise ValueError(
+                f"raised_floors y span {raised_floor_spec.y_start_u:g}-"
+                f"{raised_floor_spec.y_end_u:g}U is outside 0-{unit_depth:g}U."
+            )
+        if raised_floor_spec.x_start_u >= raised_floor_spec.x_end_u:
+            raise ValueError("raised_floors x span must have a start less than its end.")
+        if raised_floor_spec.y_start_u >= raised_floor_spec.y_end_u:
+            raise ValueError("raised_floors y span must have a start less than its end.")
+        _validate_positive("raised_floors height_mm", raised_floor_spec.height_mm)
+
+
+def _apply_raised_floors(
+    rendered_box,
+    *,
+    raised_floor_specs: tuple[RaisedFloorSpec, ...],
+    wall_thickness_mm: float,
+):
+    if not raised_floor_specs:
+        return rendered_box
+
+    import cadquery as cq
+    from cqgridfinity import GR_BASE_HEIGHT, GR_FLOOR
+
+    bounding_box = rendered_box.val().BoundingBox()
+    floor_top_z = GR_BASE_HEIGHT + GR_FLOOR
+    result = rendered_box
+
+    for raised_floor_spec in raised_floor_specs:
+        x_minimum, x_maximum = _inner_unit_span_to_coordinates(
+            span_start_u=raised_floor_spec.x_start_u,
+            span_end_u=raised_floor_spec.x_end_u,
+            minimum=bounding_box.xmin,
+            maximum=bounding_box.xmax,
+            wall_thickness_mm=wall_thickness_mm,
+        )
+        y_minimum, y_maximum = _inner_unit_span_to_coordinates(
+            span_start_u=raised_floor_spec.y_start_u,
+            span_end_u=raised_floor_spec.y_end_u,
+            minimum=bounding_box.ymin,
+            maximum=bounding_box.ymax,
+            wall_thickness_mm=wall_thickness_mm,
+        )
+        raised_floor = (
+            cq.Workplane("XY")
+            .rect(x_maximum - x_minimum, y_maximum - y_minimum)
+            .extrude(raised_floor_spec.height_mm)
+            .translate(
+                (
+                    x_minimum + (x_maximum - x_minimum) / 2.0,
+                    y_minimum + (y_maximum - y_minimum) / 2.0,
+                    floor_top_z,
+                )
+            )
+        )
+        result = result.union(raised_floor)
+
+    return result
+
+
+def _inner_unit_span_to_coordinates(
+    *,
+    span_start_u: float,
+    span_end_u: float,
+    minimum: float,
+    maximum: float,
+    wall_thickness_mm: float,
+) -> tuple[float, float]:
+    inner_minimum = minimum + wall_thickness_mm
+    inner_maximum = maximum - wall_thickness_mm
+    return (
+        inner_minimum + span_start_u * GRID_UNIT_MM,
+        min(inner_minimum + span_end_u * GRID_UNIT_MM, inner_maximum),
+    )
 
 
 def _has_partial_dividers(
@@ -365,6 +550,8 @@ def _named_export_parts(
     vertical_specs: tuple[DividerSpec, ...],
     split_width_positions_u: tuple[float, ...],
     split_depth_positions_u: tuple[float, ...],
+    raised_floor_specs: tuple[RaisedFloorSpec, ...],
+    scoops: bool,
 ) -> dict[str, object]:
     base_name = _export_base_name(
         unit_width=unit_width,
@@ -374,6 +561,8 @@ def _named_export_parts(
         vertical_specs=vertical_specs,
         split_width_positions_u=split_width_positions_u,
         split_depth_positions_u=split_depth_positions_u,
+        raised_floor_specs=raised_floor_specs,
+        scoops=scoops,
     )
 
     if set(parts) == {"whole"}:
@@ -391,6 +580,8 @@ def _export_base_name(
     vertical_specs: tuple[DividerSpec, ...],
     split_width_positions_u: tuple[float, ...],
     split_depth_positions_u: tuple[float, ...],
+    raised_floor_specs: tuple[RaisedFloorSpec, ...],
+    scoops: bool,
 ) -> str:
     name_parts = [f"{unit_width}x{unit_depth}x{unit_height}u"]
 
@@ -404,6 +595,10 @@ def _export_base_name(
         name_parts.append(f"split_width_{_format_positions(split_width_positions_u)}u")
     if split_depth_positions_u:
         name_parts.append(f"split_depth_{_format_positions(split_depth_positions_u)}u")
+    if raised_floor_specs:
+        name_parts.append(f"raised_floors_{_format_raised_floor_specs(raised_floor_specs)}")
+    if scoops:
+        name_parts.append("scoops")
 
     return "_".join(name_parts)
 
@@ -425,6 +620,19 @@ def _format_divider_spec(divider_spec: DividerSpec, full_span_axis_units: int) -
     span_start = _format_decimal(divider_spec.span_start_u)
     span_end = _format_decimal(divider_spec.span_end_u)
     return f"{position}at{span_start}to{span_end}"
+
+
+def _format_raised_floor_specs(raised_floor_specs: tuple[RaisedFloorSpec, ...]) -> str:
+    return "_".join(_format_raised_floor_spec(spec) for spec in raised_floor_specs)
+
+
+def _format_raised_floor_spec(raised_floor_spec: RaisedFloorSpec) -> str:
+    x_start = _format_decimal(raised_floor_spec.x_start_u)
+    x_end = _format_decimal(raised_floor_spec.x_end_u)
+    y_start = _format_decimal(raised_floor_spec.y_start_u)
+    y_end = _format_decimal(raised_floor_spec.y_end_u)
+    height = _format_decimal(raised_floor_spec.height_mm)
+    return f"x{x_start}to{x_end}_y{y_start}to{y_end}_{height}mm"
 
 
 def _format_positions(positions: tuple[float, ...]) -> str:
