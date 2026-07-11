@@ -139,3 +139,5 @@ Model conventions:
 - `gridfinity_exact_fit_baseplate`: dynamically tiled Gridfinity baseplate that fills an exact
   outer footprint with the largest centered standard grid that fits. Defaults to a 407 mm x 298 mm
   footprint split for a Prusa CORE One+ safe print area.
+- `gridfinity_shims`: simple parametric shim pack for tightening Gridfinity baseplates or bins
+  in drawers. Defaults to 84 mm long, 5 mm tall shims in 1, 1.5, and 2 mm widths.
