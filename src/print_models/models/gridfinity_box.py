@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 NAME = "gridfinity_box"
 DESCRIPTION = (
-    "Gridfinity storage box with lip, solid no-hole bottom, and optional fractional "
-    "horizontal/vertical dividers."
+    "Gridfinity storage box with lip, solid no-hole bottom, optional fractional "
+    "dividers, and automatic print-bed-aware splitting."
 )
 PARAMETERS = {
     "unit_width": 5,
@@ -18,6 +18,10 @@ PARAMETERS = {
     "vertical_dividers": "",
     "split_width_u": "",
     "split_depth": "",
+    "auto_split": True,
+    "max_print_width": 240.0,
+    "max_print_depth": 210.0,
+    "allow_rotation": True,
     "raised_floors": "",
     "scoops": False,
     "wall_thickness_mm": 1.0,
@@ -29,9 +33,10 @@ PRINT_NOTES = (
     "dividers run left-to-right and are positioned from the inside front edge along "
     "depth; their optional span is along width. Vertical dividers run front-to-back and "
     "are positioned from the inside left edge along width; their optional span is along "
-    "depth. Positions and spans may be decimal units. Split positions are comma-separated "
-    "Gridfinity unit positions along the outer width/depth footprint and produce "
-    "separate open-ended parts that can be joined after printing. Raised floor specs use "
+    "depth. Positions and spans may be decimal units. Boxes are automatically split on "
+    "Gridfinity unit boundaries when they exceed the default 240 x 210 mm safe print area "
+    "for a Prusa CORE One+. Set auto_split=false to disable this, or provide explicit "
+    "split positions to control either axis. Raised floor specs use "
     "x_start-x_end@y_start-y_end:height_mm."
 )
 
@@ -189,6 +194,10 @@ def build(
     vertical_dividers: str | Sequence[float] = "",
     split_width_u: str | Sequence[float] = "",
     split_depth: str | Sequence[float] = "",
+    auto_split: bool = True,
+    max_print_width: float = 240.0,
+    max_print_depth: float = 210.0,
+    allow_rotation: bool = True,
     raised_floors: str | Sequence[RaisedFloorSpec] = "",
     scoops: bool = False,
     wall_thickness_mm: float = 1.0,
@@ -198,6 +207,8 @@ def build(
     _validate_unit_count("unit_width", unit_width)
     _validate_unit_count("unit_depth", unit_depth)
     _validate_unit_count("unit_height", unit_height)
+    _validate_positive("max_print_width", max_print_width)
+    _validate_positive("max_print_depth", max_print_depth)
     _validate_positive("wall_thickness_mm", wall_thickness_mm)
     _validate_positive("divider_thickness_mm", divider_thickness_mm)
 
@@ -246,6 +257,17 @@ def build(
         box.render(),
         raised_floor_specs=raised_floor_specs,
         wall_thickness_mm=wall_thickness_mm,
+    )
+    split_width_positions_u, split_depth_positions_u = _resolve_print_bed_splits(
+        rendered_box,
+        split_width_positions_u=split_width_positions_u,
+        split_depth_positions_u=split_depth_positions_u,
+        unit_width=unit_width,
+        unit_depth=unit_depth,
+        auto_split=auto_split,
+        max_print_width=max_print_width,
+        max_print_depth=max_print_depth,
+        allow_rotation=allow_rotation,
     )
     parts = _split_rendered_box(
         rendered_box,
@@ -657,6 +679,107 @@ def _resolve_split_positions(
         positions_u=positions,
     )
     return positions
+
+
+def _resolve_print_bed_splits(
+    rendered_box,
+    *,
+    split_width_positions_u: tuple[float, ...],
+    split_depth_positions_u: tuple[float, ...],
+    unit_width: int,
+    unit_depth: int,
+    auto_split: bool,
+    max_print_width: float,
+    max_print_depth: float,
+    allow_rotation: bool,
+) -> tuple[tuple[float, ...], tuple[float, ...]]:
+    if not auto_split:
+        return split_width_positions_u, split_depth_positions_u
+
+    bounding_box = rendered_box.val().BoundingBox()
+    width_candidates = (
+        (split_width_positions_u,)
+        if split_width_positions_u
+        else _automatic_split_candidates(unit_width)
+    )
+    depth_candidates = (
+        (split_depth_positions_u,)
+        if split_depth_positions_u
+        else _automatic_split_candidates(unit_depth)
+    )
+
+    best: tuple[tuple[float, ...], tuple[float, ...], tuple[float, ...]] | None = None
+    for width_positions in width_candidates:
+        width_segments = _axis_segments(
+            minimum=bounding_box.xmin,
+            maximum=bounding_box.xmax,
+            unit_count=unit_width,
+            split_positions_u=width_positions,
+        )
+        for depth_positions in depth_candidates:
+            depth_segments = _axis_segments(
+                minimum=bounding_box.ymin,
+                maximum=bounding_box.ymax,
+                unit_count=unit_depth,
+                split_positions_u=depth_positions,
+            )
+            if not all(
+                _tile_fits(
+                    width_maximum - width_minimum,
+                    depth_maximum - depth_minimum,
+                    max_print_width,
+                    max_print_depth,
+                    allow_rotation,
+                )
+                for width_minimum, width_maximum in width_segments
+                for depth_minimum, depth_maximum in depth_segments
+            ):
+                continue
+
+            width_sizes = tuple(maximum - minimum for minimum, maximum in width_segments)
+            depth_sizes = tuple(maximum - minimum for minimum, maximum in depth_segments)
+            score = (
+                len(width_segments) * len(depth_segments),
+                abs(len(width_segments) - len(depth_segments)),
+                max(width_sizes) - min(width_sizes) + max(depth_sizes) - min(depth_sizes),
+                max(width_sizes) * max(depth_sizes),
+            )
+            if best is None or score < best[2]:
+                best = (width_positions, depth_positions, score)
+
+    if best is None:
+        raise ValueError(
+            "Could not split the Gridfinity box into parts that fit the print area of "
+            f"{max_print_width:g} x {max_print_depth:g} mm."
+        )
+
+    return best[0], best[1]
+
+
+def _automatic_split_candidates(unit_count: int) -> tuple[tuple[float, ...], ...]:
+    candidates = []
+    for part_count in range(1, unit_count + 1):
+        cell_count = unit_count // part_count
+        extra_cells = unit_count % part_count
+        positions = []
+        position = 0
+        for index in range(part_count - 1):
+            position += cell_count + (1 if index < extra_cells else 0)
+            positions.append(float(position))
+        candidates.append(tuple(positions))
+    return tuple(candidates)
+
+
+def _tile_fits(
+    width: float,
+    depth: float,
+    max_print_width: float,
+    max_print_depth: float,
+    allow_rotation: bool,
+) -> bool:
+    fits = width <= max_print_width and depth <= max_print_depth
+    rotated_fits = allow_rotation and width <= max_print_depth and depth <= max_print_width
+    return fits or rotated_fits
 
 
 def _split_rendered_box(

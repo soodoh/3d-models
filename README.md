@@ -136,7 +136,8 @@ Model conventions:
 - `monopoly_deal_storage_box`: editable CadQuery rebuild for a Monopoly Deal sliding deck box.
 - `gridfinity_box`: Gridfinity storage box with lip, no magnet/screw holes or labels,
   optional scoops, full or partial decimal-unit divider specs, raised floor regions, and
-  optional split exports for oversized boxes.
+  automatic Gridfinity-boundary splitting for oversized boxes (default safe area: 240 x
+  210 mm for a Prusa CORE One+).
 - `gridfinity_exact_fit_baseplate`: dynamically tiled Gridfinity baseplate that fills an exact
   outer footprint with the largest centered standard grid that fits. Defaults to a 407 mm x 298 mm
   footprint split for a Prusa CORE One+ safe print area.
