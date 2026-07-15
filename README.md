@@ -137,7 +137,9 @@ Model conventions:
 - `gridfinity_box`: Gridfinity storage box with lip, no magnet/screw holes or labels,
   optional scoops, full or partial decimal-unit divider specs, raised floor regions, and
   automatic Gridfinity-boundary splitting for oversized boxes (default safe area: 240 x
-  210 mm for a Prusa CORE One+).
+  210 mm for a Prusa CORE One+). Unsupported split faces receive removable breakaway
+  brace lattices unless a full-span parallel divider is within 2U on that side. Brace
+  thickness and crossbar density automatically increase for taller unsupported walls.
 - `gridfinity_exact_fit_baseplate`: dynamically tiled Gridfinity baseplate that fills an exact
   outer footprint with the largest centered standard grid that fits. Defaults to a 407 mm x 298 mm
   footprint split for a Prusa CORE One+ safe print area.
