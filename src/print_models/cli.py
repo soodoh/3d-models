@@ -10,6 +10,7 @@ from types import ModuleType
 from typing import Any
 
 from print_models.catalog import load_models
+from print_models.filenames import output_filename
 
 EXPORT_FORMATS = ("stl", "step", "3mf", "svg")
 
@@ -119,7 +120,7 @@ def export_models(models: dict[str, ModuleType], args: argparse.Namespace) -> No
                 raise SystemExit(message)
 
             for output_name, exportable in exportables.items():
-                output_path = args.out_dir / f"{output_name}.{file_format}"
+                output_path = args.out_dir / output_filename(output_name, file_format)
                 exportable.export(str(output_path))
                 print(output_path)
 

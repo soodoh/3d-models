@@ -19,8 +19,10 @@ if SRC_DIR.exists():
     sys.path.insert(0, str(SRC_DIR))
 
 from cadquery import exporters  # noqa: E402
+
 from print_models.catalog import load_models  # noqa: E402
 from print_models.cli import normalize_exportables, parse_parameters  # noqa: E402
+from print_models.filenames import output_filename, sanitize_filename  # noqa: E402
 
 PREVIEW_FORMATS = ("svg", "png", "both")
 EXPORT_FORMATS = ("stl", "step", "3mf", "svg")
@@ -259,12 +261,12 @@ def write_previews(exportables: Mapping[str, Any], args: argparse.Namespace) -> 
             svg_text = exporters.getSVG(shape, preview_options(args, view))
 
             if args.preview_format in {"svg", "both"}:
-                svg_path = args.out_dir / f"{name}_{view}.svg"
+                svg_path = args.out_dir / output_filename(f"{name}_{view}", "svg")
                 svg_path.write_text(svg_text)
                 print(svg_path)
 
             if args.preview_format in {"png", "both"}:
-                png_path = args.out_dir / f"{name}_{view}.png"
+                png_path = args.out_dir / output_filename(f"{name}_{view}", "png")
                 write_png_preview(svg_text, png_path)
                 print(png_path)
 
@@ -463,7 +465,7 @@ def strip_namespace(tag: str) -> str:
 def write_exports(exportables: Mapping[str, Any], export_dir: Path, file_format: str) -> None:
     export_dir.mkdir(parents=True, exist_ok=True)
     for name, exportable in exportables.items():
-        output_path = export_dir / f"{name}.{file_format}"
+        output_path = export_dir / output_filename(name, file_format)
         if hasattr(exportable, "export"):
             exportable.export(str(output_path))
         else:
@@ -489,10 +491,6 @@ def shape_from_exportable(exportable: Any) -> Any:
     if hasattr(exportable, "val"):
         return exportable.val()
     return exportable
-
-
-def sanitize_filename(value: str) -> str:
-    return re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("_") or "model"
 
 
 def sanitize_module_name(value: str) -> str:

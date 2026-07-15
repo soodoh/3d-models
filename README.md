@@ -85,7 +85,10 @@ Generate every starter model:
 generate-model export --all --format stl --format step
 ```
 
-Generated files are written to `build/` by default and ignored by git.
+Generated files are written to `build/` by default and ignored by git. Model and
+preview filenames are sanitized and capped at 167 characters, including the extension,
+to match the `FILE_NAME_MAX_LEN` in Prusa CORE One+ Buddy firmware. Overlong names are
+shortened deterministically with a hash to reduce collision risk between parameterized models.
 
 ## Preview and inspect models
 
