@@ -14,6 +14,8 @@ import preview
 from print_models.cli import export_models
 from print_models.filenames import (
     PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH,
+    PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH,
+    PRUSA_SLICER_MAX_OUTPUT_SUFFIX_LENGTH,
     output_filename,
 )
 
@@ -27,19 +29,27 @@ class RecordingExportable:
 
 
 class OutputFilenameTests(unittest.TestCase):
-    def test_counts_extension_within_prusa_limit(self) -> None:
+    def test_counts_extension_within_prusa_input_limit(self) -> None:
         extension = ".stl"
-        stem = "a" * (PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH - len(extension))
+        stem = "a" * (PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH - len(extension))
 
         filename = output_filename(stem, extension)
 
         self.assertEqual(filename, f"{stem}{extension}")
-        self.assertEqual(len(filename), PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH)
+        self.assertEqual(len(filename), PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH)
+
+    def test_reserves_room_for_prusa_slicer_output_metadata(self) -> None:
+        filename = output_filename("model_" * 40, ".stl")
+        sliced_suffix = "_0.25n_0.05mm_PETG_COREONE_1d23h59m.bgcode"
+        sliced_filename = f"{Path(filename).stem}{sliced_suffix}"
+
+        self.assertEqual(len(sliced_suffix), PRUSA_SLICER_MAX_OUTPUT_SUFFIX_LENGTH)
+        self.assertEqual(len(sliced_filename), PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH)
 
     def test_shortens_long_names_and_preserves_extension(self) -> None:
         filename = output_filename("prefix_" + "parameter_" * 30 + "printable_part", "step")
 
-        self.assertEqual(len(filename), PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH)
+        self.assertEqual(len(filename), PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH)
         self.assertTrue(filename.startswith("prefix_"))
         self.assertTrue(filename.endswith("printable_part.step"))
 
@@ -50,18 +60,18 @@ class OutputFilenameTests(unittest.TestCase):
         second = output_filename(f"{shared}second", "3mf")
 
         self.assertNotEqual(first, second)
-        self.assertLessEqual(len(first), PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH)
-        self.assertLessEqual(len(second), PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH)
+        self.assertLessEqual(len(first), PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH)
+        self.assertLessEqual(len(second), PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH)
 
     def test_sanitizes_unsafe_characters(self) -> None:
         self.assertEqual(output_filename("box / lid: final", ".stl"), "box_lid_final.stl")
 
     def test_handles_an_extension_that_leaves_no_retained_suffix(self) -> None:
-        extension = "e" * 155
+        extension = "e" * (PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH - 12)
 
         filename = output_filename("model" * 40, extension)
 
-        self.assertEqual(len(filename), PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH)
+        self.assertEqual(len(filename), PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH)
         self.assertTrue(filename.endswith(f".{extension}"))
 
     def test_requires_an_extension(self) -> None:
@@ -88,7 +98,7 @@ class CliFilenameTests(unittest.TestCase):
         self.assertEqual(len(exportable.paths), 1)
         self.assertLessEqual(
             len(exportable.paths[0].name),
-            PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH,
+            PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH,
         )
         self.assertEqual(exportable.paths[0].suffix, ".stl")
 
@@ -107,7 +117,7 @@ class PreviewFilenameTests(unittest.TestCase):
         self.assertEqual(len(exportable.paths), 1)
         self.assertLessEqual(
             len(exportable.paths[0].name),
-            PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH,
+            PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH,
         )
         self.assertEqual(exportable.paths[0].suffix, ".step")
 
@@ -133,7 +143,7 @@ class PreviewFilenameTests(unittest.TestCase):
         self.assertEqual(len(filenames), 1)
         self.assertLessEqual(
             len(filenames[0]),
-            PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH,
+            PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH,
         )
         self.assertTrue(filenames[0].endswith("isometric.svg"))
 

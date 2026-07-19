@@ -9,18 +9,30 @@ import re
 # as 160 + 1 + 5 + 1. The limit covers the complete filename, including its
 # extension: https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/v6.6.2/src/gui/file_list_defs.h
 PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH = 167
+
+# Stock PrusaSlicer profiles derive the G-code name from the input stem and append
+# print metadata. Reserve enough room for the longest stock CORE One+ form, such as
+# "_0.25n_0.05mm_PETG_COREONE_1d23h59m.bgcode" (42 characters). The input
+# extension is replaced, rather than retained, when PrusaSlicer creates that name.
+# https://github.com/prusa3d/PrusaSlicer/blob/master/resources/profiles/PrusaResearch.ini
+PRUSA_SLICER_MAX_OUTPUT_SUFFIX_LENGTH = 42
+PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH = (
+    PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH
+    - PRUSA_SLICER_MAX_OUTPUT_SUFFIX_LENGTH
+    + len(".stl")
+)
 _TRUNCATION_HASH_LENGTH = 8
 
 
 def output_filename(base_name: str, extension: str) -> str:
-    """Return a sanitized filename within the CORE One+ firmware limit."""
+    """Return a sanitized filename with room for PrusaSlicer's print metadata."""
     normalized_extension = extension.removeprefix(".")
     if not normalized_extension:
         raise ValueError("A filename extension is required.")
 
     stem = sanitize_filename(base_name)
     suffix = f".{normalized_extension}"
-    maximum_stem_length = PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH - len(suffix)
+    maximum_stem_length = PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH - len(suffix)
     if maximum_stem_length < _TRUNCATION_HASH_LENGTH + 3:
         raise ValueError(f"Filename extension is too long: {extension!r}")
 
