@@ -6,8 +6,21 @@ from collections.abc import Mapping
 from importlib.resources import files
 
 from print_models.dovetail import trapezoidal_panel
+from print_models.dxf import extrude_dxf_regions, union_dxf_regions
 
 NAME = "monopoly_deal_storage_box"
+_MONOPOLY_DEAL_LOGO_REGIONS = (
+    (0, (1, 13)),
+    (2, ()),
+    (3, ()),
+    (4, (9,)),
+    (5, (10,)),
+    (6, (11, 12)),
+    (7, ()),
+    (8, ()),
+    (14, ()),
+    (15, ()),
+)
 DESCRIPTION = (
     "CadQuery rebuild of a Monopoly Deal deck box body and sliding lid."
 )
@@ -260,7 +273,7 @@ def _build_lid(
             z=bottom_z + base_thickness - 0.05,
             height=relief_height + 0.05,
         ).translate((center_x, center_y, 0.0))
-        lid = lid.union(logo)
+        lid = union_dxf_regions(cq, base=lid, regions=logo)
 
     return lid.clean()
 
@@ -463,5 +476,10 @@ def _monopoly_deal_logo(cq, *, z: float, height: float):
     dxf_path = files("print_models.assets.logos").joinpath(
         "monopoly_deal_lid_logo_from_printables_697154.dxf"
     )
-    logo = cq.importers.importDXF(str(dxf_path)).wires().toPending().extrude(height)
+    logo = extrude_dxf_regions(
+        cq,
+        path=dxf_path,
+        height=height,
+        regions=_MONOPOLY_DEAL_LOGO_REGIONS,
+    )
     return logo.translate((0.0, 0.0, z))

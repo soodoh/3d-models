@@ -21,7 +21,8 @@ generate-model = "print_models.cli:main"
 packages = ["src/print_models"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/print_models/assets/fonts/Fraunces144pt-Black.ttf" = "print_models/assets/fonts/Fraunces144pt-Black.ttf"
+"src/print_models/assets/fonts/Fraunces144pt-Black.otf" = "print_models/assets/fonts/Fraunces144pt-Black.otf"
+"src/print_models/assets/fonts/OFL.txt" = "print_models/assets/fonts/OFL.txt"
 "src/print_models/assets/logos/dutch_blitz_title_from_124738.dxf" = "print_models/assets/logos/dutch_blitz_title_from_124738.dxf"
 "src/print_models/assets/logos/five_crowns_lid_logo_from_source_section.dxf" = "print_models/assets/logos/five_crowns_lid_logo_from_source_section.dxf"
 "src/print_models/assets/logos/monopoly_deal_lid_logo_from_printables_697154.dxf" = "print_models/assets/logos/monopoly_deal_lid_logo_from_printables_697154.dxf"

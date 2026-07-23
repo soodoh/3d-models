@@ -6,8 +6,14 @@ from collections.abc import Mapping
 from importlib.resources import files
 
 from print_models.dovetail import trapezoidal_panel
+from print_models.dxf import extrude_dxf_regions, union_dxf_regions
 
 NAME = "five_crowns_storage_box"
+_FIVE_CROWNS_LOGO_REGIONS = (
+    (0, (1, 2, 4, 5, 7, 8, 9, 10, 11, 12)),
+    (3, ()),
+    (6, ()),
+)
 DESCRIPTION = (
     "CadQuery rebuild of the Printables Five Crowns deck box body and sliding lid."
 )
@@ -258,7 +264,7 @@ def _build_lid(
             z=bottom_z + base_thickness,
             height=relief_height,
         ).translate((center_x, center_y, 0.0))
-        lid = lid.union(logo)
+        lid = union_dxf_regions(cq, base=lid, regions=logo)
 
     return lid.clean()
 
@@ -460,5 +466,10 @@ def _five_crowns_logo(cq, *, z: float, height: float):
     dxf_path = files("print_models.assets.logos").joinpath(
         "five_crowns_lid_logo_from_source_section.dxf"
     )
-    logo = cq.importers.importDXF(str(dxf_path)).wires().toPending().extrude(height)
+    logo = extrude_dxf_regions(
+        cq,
+        path=dxf_path,
+        height=height,
+        regions=_FIVE_CROWNS_LOGO_REGIONS,
+    )
     return logo.translate((0.0, 0.0, z))
