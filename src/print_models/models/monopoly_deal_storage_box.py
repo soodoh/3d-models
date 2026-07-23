@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from importlib.resources import files
 
+from print_models.dovetail import trapezoidal_panel
+
 NAME = "monopoly_deal_storage_box"
 DESCRIPTION = (
     "CadQuery rebuild of a Monopoly Deal deck box body and sliding lid."
@@ -276,17 +278,14 @@ def _rounded_prism(cq, width: float, depth: float, height: float, radius: float)
 
 
 def _lid_dovetail_blank(cq, width: float, bottom_depth: float, height: float):
-    # Same trapezoidal YZ profile used by the Dutch Blitz lid: the bottom is wider
-    # than the top so it slides into matching dovetail tracks in the container.
-    side_inset = 2.154108
-    top_depth = bottom_depth - side_inset * 2.0
-    profile = [
-        (-bottom_depth / 2.0, 0.0),
-        (bottom_depth / 2.0, 0.0),
-        (top_depth / 2.0, height),
-        (-top_depth / 2.0, height),
-    ]
-    return cq.Workplane("YZ").polyline(profile).close().extrude(width / 2.0, both=True)
+    return trapezoidal_panel(
+        cq,
+        length=width,
+        bottom_width=bottom_depth,
+        height=height,
+        side_inset=2.154108,
+        extrusion_axis="x",
+    )
 
 
 def _cut_lid_click_notches(

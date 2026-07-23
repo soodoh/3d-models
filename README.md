@@ -139,12 +139,19 @@ Model conventions:
   lid/container variants.
 - `five_crowns_storage_box`: editable CadQuery rebuild for a Five Crowns sliding deck box.
 - `monopoly_deal_storage_box`: editable CadQuery rebuild for a Monopoly Deal sliding deck box.
-- `gridfinity_box`: Gridfinity storage box with lip, no magnet/screw holes or labels,
-  optional scoops, full or partial decimal-unit divider specs, raised floor regions, and
-  automatic Gridfinity-boundary splitting for oversized boxes (default safe area: 240 x
-  210 mm for a Prusa CORE One+). Unsupported split faces receive removable breakaway
-  brace lattices unless a full-span parallel divider is within 2U on that side. Brace
-  thickness and crossbar density automatically increase for taller unsupported walls.
+- `gridfinity_box`: Gridfinity storage box with a stacking lip or an opt-in matching
+  dovetail lid (`lid_style=ziplock|wrap`), no magnet/screw holes or labels, optional
+  scoops, decimal-unit dividers, raised floors, and automatic Gridfinity-boundary
+  splitting for oversized boxes (default safe area: 240 x 210 mm for a Prusa CORE One+).
+  Dovetail modes use a hole-free, lipless reference body with a 2.4 mm minimum wall,
+  7.4 mm interior floor, and 7 mm per height unit. The short-box minimum preserves at
+  least 1.2 mm of usable cavity below the lid. The low-coordinate end has the profiled
+  stop; the lid withdraws through the open high-coordinate end along the longest
+  footprint axis. Wrap boxes add an asymmetric semicircular roll trough and raised shelf,
+  scaling only when the available cross span or height is smaller than the 2U x 9U
+  reference. Raised floors must stop below the lid ceiling; wrap pads and dividers fully
+  buried by the raised shelf are rejected. Lids use the box's split planes; lid seam bars keep every
+  tile connected while breakaway braces remain box-only.
 - `gridfinity_exact_fit_baseplate`: dynamically tiled Gridfinity baseplate that fills an exact
   outer footprint with the largest centered standard grid that fits. Defaults to a 407 mm x 298 mm
   footprint split for a Prusa CORE One+ safe print area.
