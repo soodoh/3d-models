@@ -13,7 +13,7 @@ import preview
 
 from print_models.cli import export_models
 from print_models.filenames import (
-    PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH,
+    PRUSA_LINK_MAX_OUTPUT_FILENAME_LENGTH,
     PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH,
     PRUSA_SLICER_MAX_OUTPUT_SUFFIX_LENGTH,
     output_filename,
@@ -44,7 +44,18 @@ class OutputFilenameTests(unittest.TestCase):
         sliced_filename = f"{Path(filename).stem}{sliced_suffix}"
 
         self.assertEqual(len(sliced_suffix), PRUSA_SLICER_MAX_OUTPUT_SUFFIX_LENGTH)
-        self.assertEqual(len(sliced_filename), PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH)
+        self.assertEqual(len(sliced_filename), PRUSA_LINK_MAX_OUTPUT_FILENAME_LENGTH)
+
+    def test_shortens_wrap_box_name_for_prusalink_upload(self) -> None:
+        base_name = "gridfinity_box_2x8x9u_split_depth_4u_dovetail_wrap_box_depth_1_of_2"
+        sliced_suffix = "_0.4n_0.2mm_PLA_COREONE_5h58m.bgcode"
+
+        filename = output_filename(base_name, ".stl")
+        sliced_filename = f"{Path(filename).stem}{sliced_suffix}"
+
+        self.assertEqual(len(filename), PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH)
+        self.assertLessEqual(len(sliced_filename), PRUSA_LINK_MAX_OUTPUT_FILENAME_LENGTH)
+        self.assertNotEqual(filename, f"{base_name}.stl")
 
     def test_shortens_long_names_and_preserves_extension(self) -> None:
         filename = output_filename("prefix_" + "parameter_" * 30 + "printable_part", "step")

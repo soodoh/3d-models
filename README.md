@@ -100,11 +100,11 @@ generate-model export --all --format stl --format step
 ```
 
 Generated files are written to `build/` by default and ignored by git. Model and
-preview filenames are sanitized and capped at 129 characters, including the extension. This
+preview filenames are sanitized and capped at 64 characters, including the extension. This
 leaves room for the layer height, filament, printer, print time, and G-code extension that stock
-PrusaSlicer profiles append without exceeding the 167-character `FILE_NAME_MAX_LEN` in Prusa
-CORE One+ Buddy firmware. Overlong names are shortened deterministically with a hash to reduce
-collision risk between parameterized models.
+PrusaSlicer profiles append while keeping the sliced filename below the 103-character
+`FILE_PATH_MAX_LEN` used by PrusaLink and Prusa CORE One+ Buddy firmware. Overlong names are
+shortened deterministically with a hash to reduce collision risk between parameterized models.
 
 ## Preview and inspect models
 

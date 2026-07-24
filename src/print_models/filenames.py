@@ -5,10 +5,11 @@ from __future__ import annotations
 import hashlib
 import re
 
-# Buddy firmware 6.6.2, released for the CORE One+, defines FILE_NAME_MAX_LEN
-# as 160 + 1 + 5 + 1. The limit covers the complete filename, including its
-# extension: https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/v6.6.2/src/gui/file_list_defs.h
-PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH = 167
+# Buddy firmware 6.6.2 defines FILE_PATH_MAX_LEN as 103 characters. PrusaLink and
+# PrusaSlicer place the sliced filename in an upload URI/path, so keep the visible
+# output filename strictly below that boundary.
+# https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/v6.6.2/src/gui/file_list_defs.h
+PRUSA_LINK_MAX_OUTPUT_FILENAME_LENGTH = 102
 
 # Stock PrusaSlicer profiles derive the G-code name from the input stem and append
 # print metadata. Reserve enough room for the longest stock CORE One+ form, such as
@@ -17,7 +18,7 @@ PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH = 167
 # https://github.com/prusa3d/PrusaSlicer/blob/master/resources/profiles/PrusaResearch.ini
 PRUSA_SLICER_MAX_OUTPUT_SUFFIX_LENGTH = 42
 PRUSA_SLICER_INPUT_MAX_FILENAME_LENGTH = (
-    PRUSA_CORE_ONE_PLUS_MAX_FILENAME_LENGTH - PRUSA_SLICER_MAX_OUTPUT_SUFFIX_LENGTH + len(".stl")
+    PRUSA_LINK_MAX_OUTPUT_FILENAME_LENGTH - PRUSA_SLICER_MAX_OUTPUT_SUFFIX_LENGTH + len(".stl")
 )
 _TRUNCATION_HASH_LENGTH = 8
 
