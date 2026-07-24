@@ -276,7 +276,8 @@ def _tile_fits(
 
 
 def _layout_score(
-    x_tiles: tuple[AxisTile, ...], y_tiles: tuple[AxisTile, ...]) -> tuple[float, ...]:
+    x_tiles: tuple[AxisTile, ...], y_tiles: tuple[AxisTile, ...]
+) -> tuple[float, ...]:
     tile_widths = [tile.size for tile in x_tiles]
     tile_depths = [tile.size for tile in y_tiles]
     return (

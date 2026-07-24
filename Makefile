@@ -32,7 +32,7 @@ help:
 
 setup:
 	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install -e .
+	$(PYTHON) -m pip install -e '.[dev]'
 
 list:
 	generate-model list

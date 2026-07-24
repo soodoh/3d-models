@@ -317,9 +317,7 @@ def build(
         if normalized_lid_style == "none"
         else max(wall_thickness_mm, DOVETAIL_MINIMUM_WALL_MM)
     )
-    render_unit_height = (
-        unit_height if normalized_lid_style == "none" else max(unit_height, 2)
-    )
+    render_unit_height = unit_height if normalized_lid_style == "none" else max(unit_height, 2)
 
     horizontal_specs = _resolve_divider_specs(
         axis_name="horizontal",
@@ -535,12 +533,8 @@ def _resolve_dovetail_layout(
     slide_extent = bounding_box.ylen if slide_axis == "depth" else bounding_box.xlen
     cross_units = unit_width if slide_axis == "depth" else unit_depth
     slide_units = unit_depth if slide_axis == "depth" else unit_width
-    nominal_cross_extent = (
-        cross_units * GRID_UNIT_MM - DOVETAIL_REFERENCE_ENVELOPE_REDUCTION_MM
-    )
-    nominal_slide_extent = (
-        slide_units * GRID_UNIT_MM - DOVETAIL_REFERENCE_ENVELOPE_REDUCTION_MM
-    )
+    nominal_cross_extent = cross_units * GRID_UNIT_MM - DOVETAIL_REFERENCE_ENVELOPE_REDUCTION_MM
+    nominal_slide_extent = slide_units * GRID_UNIT_MM - DOVETAIL_REFERENCE_ENVELOPE_REDUCTION_MM
     lid_bottom_width = nominal_cross_extent - 2.0 * DOVETAIL_LID_BOTTOM_INSET_MM
     lid_length = nominal_slide_extent - DOVETAIL_THROAT_MM
     top_width = lid_bottom_width - 2.0 * DOVETAIL_SIDE_INSET_MM
@@ -922,10 +916,7 @@ def _add_dovetail_channels(rendered_box, layout: DovetailLayout):
         + 2.0 * DOVETAIL_BOOLEAN_OVERLAP_MM
     ) / 2.0
     front_cutter = (
-        cq.Workplane(end_plane)
-        .polyline(front_points)
-        .close()
-        .extrude(front_half_length, both=True)
+        cq.Workplane(end_plane).polyline(front_points).close().extrude(front_half_length, both=True)
     )
     if layout.slide_axis == "depth":
         front_cutter = front_cutter.translate((layout.center_x, 0.0, 0.0))
@@ -1363,8 +1354,7 @@ def _parse_divider_spec(
     raw_span_start, range_separator, raw_span_end = raw_span.partition("-")
     if not range_separator:
         raise ValueError(
-            f"{parameter_name} divider spec {raw_spec!r} must use span_start-span_end "
-            "after '@'."
+            f"{parameter_name} divider spec {raw_spec!r} must use span_start-span_end after '@'."
         )
 
     stripped_span_start = raw_span_start.strip()
@@ -1480,12 +1470,9 @@ def _export_base_name(
     return "_".join(name_parts)
 
 
-def _format_divider_specs(
-    divider_specs: tuple[DividerSpec, ...], full_span_axis_units: int
-) -> str:
+def _format_divider_specs(divider_specs: tuple[DividerSpec, ...], full_span_axis_units: int) -> str:
     return "_".join(
-        _format_divider_spec(divider_spec, full_span_axis_units)
-        for divider_spec in divider_specs
+        _format_divider_spec(divider_spec, full_span_axis_units) for divider_spec in divider_specs
     )
 
 
@@ -1941,9 +1928,7 @@ def _crossing_divider_coordinates(
 ) -> tuple[float, ...]:
     tolerance_u = POSITION_TOLERANCE_MM / GRID_UNIT_MM
     coordinates = {
-        position_axis_minimum
-        + wall_thickness_mm
-        + divider_spec.position_u * GRID_UNIT_MM
+        position_axis_minimum + wall_thickness_mm + divider_spec.position_u * GRID_UNIT_MM
         for divider_spec in perpendicular_divider_specs
         if divider_spec.span_start_u - tolerance_u
         <= split_position_u
@@ -2031,8 +2016,7 @@ def _breakaway_brace_profile() -> BreakawayBraceProfile:
         crossbar_height_mm=BREAKAWAY_CROSSBAR_HEIGHT_MM,
         support_width_mm=BREAKAWAY_SUPPORT_WIDTH_MM,
         crossbar_height_ratios=tuple(
-            index / BREAKAWAY_CROSSBAR_COUNT
-            for index in range(1, BREAKAWAY_CROSSBAR_COUNT + 1)
+            index / BREAKAWAY_CROSSBAR_COUNT for index in range(1, BREAKAWAY_CROSSBAR_COUNT + 1)
         ),
     )
 
@@ -2101,8 +2085,7 @@ def _add_breakaway_brace_lattice(
         return part
 
     crossbar_centers_z = tuple(
-        floor_top_z + crossbar_center_height * ratio
-        for ratio in profile.crossbar_height_ratios
+        floor_top_z + crossbar_center_height * ratio for ratio in profile.crossbar_height_ratios
     )
     open_spans = _brace_open_spans(
         span_minimum=span_minimum,
@@ -2238,9 +2221,7 @@ def _validate_split_positions(
                 f"Split positions must be greater than 0U and less than {unit_count:g}U."
             )
 
-    for previous_position, current_position in zip(
-        positions_u, positions_u[1:], strict=False
-    ):
+    for previous_position, current_position in zip(positions_u, positions_u[1:], strict=False):
         if current_position <= previous_position + POSITION_TOLERANCE_MM / GRID_UNIT_MM:
             raise ValueError(
                 f"{parameter_name} positions {previous_position:g}U and "

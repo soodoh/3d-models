@@ -171,9 +171,7 @@ def build_model(source: str, raw_parameters: list[str]) -> tuple[ModuleType, Any
             return module, module.__dict__["result"]
         if captured.objects:
             return module, captured.objects
-        raise SystemExit(
-            f"{source_path} did not define build(), result, or call show_object(...)."
-        )
+        raise SystemExit(f"{source_path} did not define build(), result, or call show_object(...).")
 
     models = load_models()
     try:

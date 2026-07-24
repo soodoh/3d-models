@@ -25,7 +25,7 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 python --version
 python -m pip install --upgrade pip
-python -m pip install -e .
+python -m pip install -e '.[dev]'
 ```
 
 If you use fish shell, activate the environment with:
@@ -39,7 +39,7 @@ If you use `uv`:
 ```bash
 uv venv --python 3.11
 source .venv/bin/activate
-uv pip install -e .
+uv pip install -e '.[dev]'
 ```
 
 Or with fish shell:
@@ -47,7 +47,21 @@ Or with fish shell:
 ```fish
 uv venv --python 3.11
 source .venv/bin/activate.fish
-uv pip install -e .
+uv pip install -e '.[dev]'
+```
+
+Verify linting and formatting with:
+
+```bash
+python -m ruff check .
+python -m ruff format --check .
+```
+
+Apply safe lint fixes and formatting with:
+
+```bash
+python -m ruff check --fix .
+python -m ruff format .
 ```
 
 ## Generate models

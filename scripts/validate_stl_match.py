@@ -133,9 +133,7 @@ def read_stl_triangles(path: Path) -> np.ndarray:
     expected_binary_size = 84 + triangle_count * 50
     if expected_binary_size == len(data):
         dtype = np.dtype([("normal", "<f4", 3), ("vertices", "<f4", (3, 3)), ("attr", "<u2")])
-        triangles = np.frombuffer(data, dtype=dtype, offset=84, count=triangle_count)[
-            "vertices"
-        ]
+        triangles = np.frombuffer(data, dtype=dtype, offset=84, count=triangle_count)["vertices"]
         return triangles.astype(np.float64)
 
     return read_ascii_stl(path)

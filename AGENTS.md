@@ -11,7 +11,7 @@ Run commands from the repository root.
 ```bash
 python3.11 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install -e .
+.venv/bin/python -m pip install -e '.[dev]'
 
 MODEL=gridfinity_shims
 .venv/bin/generate-model list
@@ -19,6 +19,8 @@ MODEL=gridfinity_shims
 .venv/bin/python preview.py "$MODEL" --no-preview
 .venv/bin/python preview.py "$MODEL" --views isometric,top,front,right
 .venv/bin/python -m unittest discover -s tests
+.venv/bin/python -m ruff check .
+.venv/bin/python -m ruff format --check .
 ```
 
 For a focused test module, use:

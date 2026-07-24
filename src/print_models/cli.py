@@ -133,7 +133,6 @@ def normalize_exportables(model_name: str, result: Any) -> dict[str, Any]:
     return {f"{model_name}_{part_name}": exportable for part_name, exportable in result.items()}
 
 
-
 def get_model(models: dict[str, ModuleType], name: str) -> ModuleType:
     try:
         return models[name]

@@ -324,12 +324,7 @@ def _rounded_prism(cq, width: float, depth: float, height: float, radius: float)
 
 def _upper_opening_cut(cq, width: float, depth: float, z_min: float, z_max: float):
     height = z_max - z_min
-    return (
-        cq.Workplane("XY")
-        .rect(width, depth)
-        .extrude(height)
-        .translate((0.0, 0.0, z_min))
-    )
+    return cq.Workplane("XY").rect(width, depth).extrude(height).translate((0.0, 0.0, z_min))
 
 
 def _card_slot_cut(
@@ -529,16 +524,12 @@ def _side_logo_cutter(
 
 
 def _title_logo_shape(cq, *, height: float, width: float, depth: float):
-    dxf_path = files("print_models.assets.logos").joinpath(
-        "dutch_blitz_title_from_124738.dxf"
-    )
+    dxf_path = files("print_models.assets.logos").joinpath("dutch_blitz_title_from_124738.dxf")
     workplane = cq.importers.importDXF(str(dxf_path))
     shape = workplane.wires().toPending().extrude(depth).val()
     logo_aspect = 1.133492252681764
     x_scale = width / logo_aspect
-    return shape.transformGeometry(
-        cq.Matrix([[x_scale, 0, 0, 0], [0, height, 0, 0], [0, 0, 1, 0]])
-    )
+    return shape.transformGeometry(cq.Matrix([[x_scale, 0, 0, 0], [0, height, 0, 0], [0, 0, 1, 0]]))
 
 
 def _engrave_container_short_side_slogans(
@@ -607,9 +598,7 @@ def _text_block(
     kind: str,
     line_spacing_factor: float,
 ):
-    lines = [
-        line.strip() for line in text.replace("/", "\n").splitlines() if line.strip()
-    ]
+    lines = [line.strip() for line in text.replace("/", "\n").splitlines() if line.strip()]
     if not lines:
         return cq.Workplane(plane, origin=origin)
 
@@ -643,9 +632,7 @@ def _text_options(font: str, kind: str) -> dict[str, str]:
 
 def _logo_font_path(font: str) -> Path | None:
     if font == "Fraunces":
-        return Path(
-            str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.otf"))
-        )
+        return Path(str(files("print_models.assets.fonts").joinpath("Fraunces144pt-Black.otf")))
 
     return None
 

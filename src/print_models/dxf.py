@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
-
 DxfRegion = tuple[int, tuple[int, ...]]
 
 
@@ -30,9 +29,7 @@ def extrude_dxf_regions(
     wires = cq.importers.importDXF(str(path)).wires().vals()
     wire_count = len(wires)
     used_indices = [
-        index
-        for outer_index, hole_indices in regions
-        for index in (outer_index, *hole_indices)
+        index for outer_index, hole_indices in regions for index in (outer_index, *hole_indices)
     ]
     if len(used_indices) != len(set(used_indices)):
         raise ValueError(f"DXF region map for {path.name} repeats a wire index.")

@@ -6,9 +6,11 @@ import unittest
 from importlib.resources import files
 
 from print_models.dxf import extrude_dxf_regions
-from print_models.models import dutch_blitz_storage_box
-from print_models.models import five_crowns_storage_box
-from print_models.models import monopoly_deal_storage_box
+from print_models.models import (
+    dutch_blitz_storage_box,
+    five_crowns_storage_box,
+    monopoly_deal_storage_box,
+)
 
 
 class CardStorageBoxTopologyTests(unittest.TestCase):

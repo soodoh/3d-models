@@ -21,9 +21,7 @@ _MONOPOLY_DEAL_LOGO_REGIONS = (
     (14, ()),
     (15, ()),
 )
-DESCRIPTION = (
-    "CadQuery rebuild of a Monopoly Deal deck box body and sliding lid."
-)
+DESCRIPTION = "CadQuery rebuild of a Monopoly Deal deck box body and sliding lid."
 PARAMETERS = {
     "part": "all",
     "outer_width": 98.362904,
@@ -160,9 +158,9 @@ def _build_container(
     track_floor_z = body_top_z - lid_thickness - 0.2
     inner_height = body_top_z - inner_bottom_z + 0.6
 
-    body = _rounded_prism(
-        cq, outer_width, outer_depth, body_height, corner_radius
-    ).translate((center_x, center_y, body_bottom_z))
+    body = _rounded_prism(cq, outer_width, outer_depth, body_height, corner_radius).translate(
+        (center_x, center_y, body_bottom_z)
+    )
     body = body.cut(
         _rounded_prism(cq, inner_width, inner_depth, inner_height, 0.35).translate(
             (center_x, center_y, inner_bottom_z)
@@ -416,9 +414,7 @@ def _dutch_style_right_lid_track_cut(
     return (
         cq.Workplane("XY")
         .box(cut_width, cut_depth, cut_height)
-        .translate(
-            (center_x + outer_width / 2.0 - 2.0, center_y, track_z + cut_height / 2.0)
-        )
+        .translate((center_x + outer_width / 2.0 - 2.0, center_y, track_z + cut_height / 2.0))
     )
 
 
@@ -460,7 +456,6 @@ def _dutch_style_top_click_features(
         pass
 
     return track_floor.union(center_lug)
-
 
 
 def _raised_lid_border(cq, width: float, depth: float, height: float, z: float):

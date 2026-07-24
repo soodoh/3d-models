@@ -283,11 +283,14 @@ class BreakawayBraceGeometryTests(unittest.TestCase):
 
         split_box = cq.Workplane("XY").box(293.5, 83.5, 45.8).translate((0.0, 0.0, 22.9))
         for unit_height, expected_brace_count in ((5, 0), (6, 2)):
-            with self.subTest(unit_height=unit_height), patch.object(
-                gridfinity_box,
-                "_add_breakaway_brace_lattice",
-                side_effect=keep_part,
-            ) as add_brace:
+            with (
+                self.subTest(unit_height=unit_height),
+                patch.object(
+                    gridfinity_box,
+                    "_add_breakaway_brace_lattice",
+                    side_effect=keep_part,
+                ) as add_brace,
+            ):
                 parts = gridfinity_box._split_rendered_box(
                     split_box,
                     split_width_positions_u=(4.0,),
@@ -505,9 +508,7 @@ class DovetailLidGeometryTests(unittest.TestCase):
         ziplock_lid = next(
             part for name, part in results["ziplock"].items() if name.endswith("_lid")
         )
-        wrap_lid = next(
-            part for name, part in results["wrap"].items() if name.endswith("_lid")
-        )
+        wrap_lid = next(part for name, part in results["wrap"].items() if name.endswith("_lid"))
         self.assertLess(ziplock_lid.val().Volume(), wrap_lid.val().Volume())
 
     def test_width_sliding_lid_clears_travel_and_is_retained(self) -> None:
@@ -597,17 +598,11 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         self.assertFalse(self.is_inside(self.ziplock_box, x_minimum + 1.55, 0.0, 61.8))
         self.assertTrue(self.is_inside(self.ziplock_box, 0.0, bounds.ymin + 0.62, 60.4))
         self.assertFalse(self.is_inside(self.ziplock_box, 0.0, bounds.ymin + 0.65, 60.4))
-        self.assertTrue(
-            self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymin + 0.5, 60.5)
-        )
-        self.assertFalse(
-            self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymin + 0.8, 60.5)
-        )
+        self.assertTrue(self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymin + 0.5, 60.5))
+        self.assertFalse(self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymin + 0.8, 60.5))
         self.assertTrue(self.is_inside(self.ziplock_box, 0.0, bounds.ymax - 1.0, 60.3))
         self.assertFalse(self.is_inside(self.ziplock_box, 0.0, bounds.ymax - 1.0, 60.5))
-        self.assertFalse(
-            self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymax - 0.5, 60.5)
-        )
+        self.assertFalse(self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymax - 0.5, 60.5))
 
     def test_width_sliding_uses_the_same_channel_and_end_profile(self) -> None:
         result = gridfinity_box.build(
@@ -624,17 +619,11 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         self.assertFalse(self.is_inside(box, 0.0, bounds.ymin + 2.5, 60.3))
         self.assertTrue(self.is_inside(box, 0.0, bounds.ymin + 0.62, 60.5))
         self.assertFalse(self.is_inside(box, 0.0, bounds.ymin + 0.65, 60.5))
-        self.assertTrue(
-            self.is_inside(box, bounds.xmin + 0.5, bounds.ymin + 2.3, 60.5)
-        )
-        self.assertFalse(
-            self.is_inside(box, bounds.xmin + 0.8, bounds.ymin + 2.3, 60.5)
-        )
+        self.assertTrue(self.is_inside(box, bounds.xmin + 0.5, bounds.ymin + 2.3, 60.5))
+        self.assertFalse(self.is_inside(box, bounds.xmin + 0.8, bounds.ymin + 2.3, 60.5))
         self.assertTrue(self.is_inside(box, bounds.xmax - 1.0, 0.0, 60.3))
         self.assertFalse(self.is_inside(box, bounds.xmax - 1.0, 0.0, 60.5))
-        self.assertFalse(
-            self.is_inside(box, bounds.xmax - 0.5, bounds.ymin + 2.3, 60.5)
-        )
+        self.assertFalse(self.is_inside(box, bounds.xmax - 0.5, bounds.ymin + 2.3, 60.5))
 
     def test_wrap_matches_reference_trough_shelf_and_volume(self) -> None:
         bounds = self.wrap_box.val().BoundingBox()
@@ -748,9 +737,7 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
             vertical_dividers="1.5",
         )
         plain_box = next(part for name, part in plain_result.items() if name.endswith("_box"))
-        visible_box = next(
-            part for name, part in visible_result.items() if name.endswith("_box")
-        )
+        visible_box = next(part for name, part in visible_result.items() if name.endswith("_box"))
         self.assertNotAlmostEqual(plain_box.val().Volume(), visible_box.val().Volume())
         self.assertTrue(visible_box.val().isValid())
         self.assertEqual(len(visible_box.solids().vals()), 1)
@@ -773,9 +760,7 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         self.assertEqual(len(scoop_box.solids().vals()), 1)
 
     def test_wrap_trough_raised_floor_only_changes_geometry(self) -> None:
-        raised_floor_box = self.build_wrap_feature_box(
-            raised_floors="0.5-1.0@0.5-1.0:2"
-        )
+        raised_floor_box = self.build_wrap_feature_box(raised_floors="0.5-1.0@0.5-1.0:2")
 
         self.assertNotAlmostEqual(
             self.feature_plain_box.val().Volume(), raised_floor_box.val().Volume()
