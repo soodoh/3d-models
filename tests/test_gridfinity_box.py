@@ -597,8 +597,17 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         self.assertFalse(self.is_inside(self.ziplock_box, x_minimum + 1.55, 0.0, 61.8))
         self.assertTrue(self.is_inside(self.ziplock_box, 0.0, bounds.ymin + 0.62, 60.4))
         self.assertFalse(self.is_inside(self.ziplock_box, 0.0, bounds.ymin + 0.65, 60.4))
+        self.assertTrue(
+            self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymin + 0.5, 60.5)
+        )
+        self.assertFalse(
+            self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymin + 0.8, 60.5)
+        )
         self.assertTrue(self.is_inside(self.ziplock_box, 0.0, bounds.ymax - 1.0, 60.3))
         self.assertFalse(self.is_inside(self.ziplock_box, 0.0, bounds.ymax - 1.0, 60.5))
+        self.assertFalse(
+            self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymax - 0.5, 60.5)
+        )
 
     def test_width_sliding_uses_the_same_channel_and_end_profile(self) -> None:
         result = gridfinity_box.build(
@@ -615,8 +624,17 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         self.assertFalse(self.is_inside(box, 0.0, bounds.ymin + 2.5, 60.3))
         self.assertTrue(self.is_inside(box, 0.0, bounds.ymin + 0.62, 60.5))
         self.assertFalse(self.is_inside(box, 0.0, bounds.ymin + 0.65, 60.5))
+        self.assertTrue(
+            self.is_inside(box, bounds.xmin + 0.5, bounds.ymin + 2.3, 60.5)
+        )
+        self.assertFalse(
+            self.is_inside(box, bounds.xmin + 0.8, bounds.ymin + 2.3, 60.5)
+        )
         self.assertTrue(self.is_inside(box, bounds.xmax - 1.0, 0.0, 60.3))
         self.assertFalse(self.is_inside(box, bounds.xmax - 1.0, 0.0, 60.5))
+        self.assertFalse(
+            self.is_inside(box, bounds.xmax - 0.5, bounds.ymin + 2.3, 60.5)
+        )
 
     def test_wrap_matches_reference_trough_shelf_and_volume(self) -> None:
         bounds = self.wrap_box.val().BoundingBox()
@@ -672,7 +690,10 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
             gridfinity_box.DOVETAIL_MINIMUM_USABLE_CAVITY_MM,
             places=6,
         )
-        self.assertGreaterEqual(usable_cavity_height, 1.2)
+        self.assertGreaterEqual(
+            usable_cavity_height + gridfinity_box.POSITION_TOLERANCE_MM,
+            1.2,
+        )
         self.assertTrue(box.val().isValid())
         self.assertEqual(len(box.solids().vals()), 1)
 

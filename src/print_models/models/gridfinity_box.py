@@ -888,23 +888,24 @@ def _add_dovetail_channels(rendered_box, layout: DovetailLayout):
         (right_boundary, throat_top_z),
         (right_boundary, side_shoulder_z),
     )
-    slide_center = (slide_minimum + slide_maximum) / 2.0
-    side_half_length = (slide_maximum - slide_minimum) / 2.0 + 1.0
+    side_track_start = slide_minimum + DOVETAIL_THROAT_MM
+    side_track_length = slide_maximum - side_track_start
+    side_track_center = side_track_start + side_track_length / 2.0
     side_cutters = (
         cq.Workplane(side_plane)
         .polyline(left_points)
         .close()
-        .extrude(side_half_length, both=True)
+        .extrude(side_track_length / 2.0, both=True)
     ).union(
         cq.Workplane(side_plane)
         .polyline(right_points)
         .close()
-        .extrude(side_half_length, both=True)
+        .extrude(side_track_length / 2.0, both=True)
     )
     if layout.slide_axis == "depth":
-        side_cutters = side_cutters.translate((0.0, slide_center, 0.0))
+        side_cutters = side_cutters.translate((0.0, side_track_center, 0.0))
     else:
-        side_cutters = side_cutters.translate((slide_center, 0.0, 0.0))
+        side_cutters = side_cutters.translate((side_track_center, 0.0, 0.0))
 
     front_boundary = slide_minimum + DOVETAIL_THROAT_MM
     front_points = (
