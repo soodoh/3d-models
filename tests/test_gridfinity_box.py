@@ -308,6 +308,31 @@ class BreakawayBraceGeometryTests(unittest.TestCase):
             self.assertEqual(len(parts), 2)
             self.assertEqual(add_brace.call_count, expected_brace_count)
 
+    def test_dovetail_boxes_never_add_breakaway_braces(self) -> None:
+        def keep_part(part, **_kwargs):
+            return part
+
+        for lid_style in ("ziplock", "wrap"):
+            with (
+                self.subTest(lid_style=lid_style),
+                patch.object(
+                    gridfinity_box,
+                    "_add_breakaway_brace_lattice",
+                    side_effect=keep_part,
+                ) as add_brace,
+            ):
+                parts = gridfinity_box.build(
+                    unit_width=2,
+                    unit_depth=4,
+                    unit_height=6,
+                    split_depth="2",
+                    auto_split=False,
+                    lid_style=lid_style,
+                )
+
+            self.assertEqual(len([name for name in parts if "_box_" in name]), 2)
+            add_brace.assert_not_called()
+
     def test_raised_floor_does_not_raise_braces_on_another_segment(self) -> None:
         parts = gridfinity_box.build(
             unit_width=7,

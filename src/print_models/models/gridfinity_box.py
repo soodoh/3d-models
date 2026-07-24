@@ -40,11 +40,12 @@ PRINT_NOTES = (
     "depth. Positions and spans may be decimal units. Boxes are automatically split on "
     "Gridfinity unit boundaries when they exceed the default 240 x 210 mm safe print area "
     "for a Prusa CORE One+. Set auto_split=false to disable this, or provide explicit "
-    "split positions to control either axis. Split boxes up to 5U high omit breakaway "
-    "supports. Split boxes 6U and taller receive removable brace lattices unless that side "
-    "has a full-span parallel divider within 2U of the split. All supports use 0.8 mm "
+    "split positions to control either axis. Split stacking-lip boxes up to 5U high omit "
+    "breakaway supports. Split stacking-lip boxes 6U and taller receive removable brace "
+    "lattices unless that side has a full-span parallel divider within 2U of the split. "
+    "Wrap and ziplock containers omit supports at every height. All supports use 0.8 mm "
     "thickness, 2.4 mm upright width, and six 2.4 mm crossbars ending below the stacking "
-    "lip or dovetail channels. Divider intersections partition each lattice so no brace "
+    "lip. Divider intersections partition each lattice so no brace "
     "overlaps a divider. Raised floor specs use x_start-x_end@y_start-y_end:height_mm. Set "
     "lid_style=ziplock or lid_style=wrap to use the hole-free reference body with a 2.4 mm "
     "minimum wall, 7.4 mm floor, low-coordinate profiled stop, and high-coordinate open "
@@ -440,6 +441,7 @@ def build(
         wall_thickness_mm=effective_wall_thickness_mm,
         divider_thickness_mm=divider_thickness_mm,
         breakaway_brace_top_z=breakaway_brace_top_z,
+        add_breakaway_braces=normalized_lid_style == "none",
     )
     naming_parameters = {
         "unit_width": unit_width,
@@ -1837,6 +1839,7 @@ def _split_rendered_box(
     wall_thickness_mm: float,
     divider_thickness_mm: float,
     breakaway_brace_top_z: float,
+    add_breakaway_braces: bool = True,
 ):
     if not split_width_positions_u and not split_depth_positions_u:
         return {"whole": rendered_box}
@@ -1858,7 +1861,7 @@ def _split_rendered_box(
     )
     width_boundaries_u = (0.0, *split_width_positions_u, float(unit_width))
     depth_boundaries_u = (0.0, *split_depth_positions_u, float(unit_depth))
-    if unit_height <= BREAKAWAY_MAX_UNBRACED_HEIGHT_U:
+    if not add_breakaway_braces or unit_height <= BREAKAWAY_MAX_UNBRACED_HEIGHT_U:
         width_braces = _empty_segment_breakaway_braces(split_width_positions_u)
         depth_braces = _empty_segment_breakaway_braces(split_depth_positions_u)
     else:
