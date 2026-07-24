@@ -589,7 +589,49 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
     def test_depth_channel_has_vertical_wall_throat_slope_and_open_high_end(self) -> None:
         bounds = self.ziplock_box.val().BoundingBox()
         x_minimum = bounds.xmin
+        left_corner_boundary_x = (
+            x_minimum
+            + gridfinity_box.DOVETAIL_MINIMUM_WALL_MM
+            + gridfinity_box.DOVETAIL_CHANNEL_INTERIOR_REACH_MM
+        )
+        right_corner_boundary_x = (
+            bounds.xmax
+            - gridfinity_box.DOVETAIL_MINIMUM_WALL_MM
+            - gridfinity_box.DOVETAIL_CHANNEL_INTERIOR_REACH_MM
+        )
 
+        self.assertTrue(
+            self.is_inside(
+                self.ziplock_box,
+                left_corner_boundary_x - gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                bounds.ymin + 1.0,
+                60.3,
+            )
+        )
+        self.assertFalse(
+            self.is_inside(
+                self.ziplock_box,
+                left_corner_boundary_x + gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                bounds.ymin + 1.0,
+                60.3,
+            )
+        )
+        self.assertTrue(
+            self.is_inside(
+                self.ziplock_box,
+                right_corner_boundary_x + gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                bounds.ymin + 1.0,
+                60.3,
+            )
+        )
+        self.assertFalse(
+            self.is_inside(
+                self.ziplock_box,
+                right_corner_boundary_x - gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                bounds.ymin + 1.0,
+                60.3,
+            )
+        )
         self.assertTrue(self.is_inside(self.ziplock_box, x_minimum + 2.3, 0.0, 60.3))
         self.assertFalse(self.is_inside(self.ziplock_box, x_minimum + 2.5, 0.0, 60.3))
         self.assertTrue(self.is_inside(self.ziplock_box, x_minimum + 0.62, 0.0, 60.5))
@@ -614,7 +656,49 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         )
         box = result["5x2x9u_dovetail_ziplock_box"]
         bounds = box.val().BoundingBox()
+        lower_corner_boundary_y = (
+            bounds.ymin
+            + gridfinity_box.DOVETAIL_MINIMUM_WALL_MM
+            + gridfinity_box.DOVETAIL_CHANNEL_INTERIOR_REACH_MM
+        )
+        upper_corner_boundary_y = (
+            bounds.ymax
+            - gridfinity_box.DOVETAIL_MINIMUM_WALL_MM
+            - gridfinity_box.DOVETAIL_CHANNEL_INTERIOR_REACH_MM
+        )
 
+        self.assertTrue(
+            self.is_inside(
+                box,
+                bounds.xmin + 1.0,
+                lower_corner_boundary_y - gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                60.3,
+            )
+        )
+        self.assertFalse(
+            self.is_inside(
+                box,
+                bounds.xmin + 1.0,
+                lower_corner_boundary_y + gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                60.3,
+            )
+        )
+        self.assertTrue(
+            self.is_inside(
+                box,
+                bounds.xmin + 1.0,
+                upper_corner_boundary_y + gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                60.3,
+            )
+        )
+        self.assertFalse(
+            self.is_inside(
+                box,
+                bounds.xmin + 1.0,
+                upper_corner_boundary_y - gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                60.3,
+            )
+        )
         self.assertTrue(self.is_inside(box, 0.0, bounds.ymin + 2.3, 60.3))
         self.assertFalse(self.is_inside(box, 0.0, bounds.ymin + 2.5, 60.3))
         self.assertTrue(self.is_inside(box, 0.0, bounds.ymin + 0.62, 60.5))

@@ -151,6 +151,7 @@ DOVETAIL_MINIMUM_BODY_HEIGHT_MM = (
     + DOVETAIL_MINIMUM_USABLE_CAVITY_MM
 )
 DOVETAIL_CHANNEL_SLOPE_RUN_MM = 1.8
+DOVETAIL_CHANNEL_INTERIOR_REACH_MM = 1.0
 DOVETAIL_BOOLEAN_OVERLAP_MM = 0.05
 DOVETAIL_WRAP_REFERENCE_INNER_SPAN_MM = 78.4
 DOVETAIL_WRAP_LEFT_LEDGE_MM = 1.2
@@ -853,7 +854,7 @@ def _add_dovetail_channels(rendered_box, layout: DovetailLayout):
     side_shoulder_z = top_z - DOVETAIL_SIDE_SHOULDER_DROP_MM
     throat_top_z = top_z - DOVETAIL_LID_THICKNESS_MM
     front_shoulder_z = top_z - DOVETAIL_FRONT_SHOULDER_DROP_MM
-    interior_reach = layout.wall_thickness_mm + 1.0
+    interior_reach = layout.wall_thickness_mm + DOVETAIL_CHANNEL_INTERIOR_REACH_MM
 
     if layout.slide_axis == "depth":
         cross_minimum, cross_maximum = bounding_box.xmin, bounding_box.xmax
@@ -909,12 +910,7 @@ def _add_dovetail_channels(rendered_box, layout: DovetailLayout):
         (slide_minimum + interior_reach, top_z),
         (slide_minimum + interior_reach, front_shoulder_z),
     )
-    front_half_length = (
-        cross_maximum
-        - cross_minimum
-        - 2.0 * layout.wall_thickness_mm
-        + 2.0 * DOVETAIL_BOOLEAN_OVERLAP_MM
-    ) / 2.0
+    front_half_length = (cross_maximum - cross_minimum - 2.0 * interior_reach) / 2.0
     front_cutter = (
         cq.Workplane(end_plane).polyline(front_points).close().extrude(front_half_length, both=True)
     )
