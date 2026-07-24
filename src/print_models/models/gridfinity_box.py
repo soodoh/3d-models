@@ -152,6 +152,7 @@ DOVETAIL_MINIMUM_BODY_HEIGHT_MM = (
 )
 DOVETAIL_CHANNEL_SLOPE_RUN_MM = 1.8
 DOVETAIL_CHANNEL_INTERIOR_REACH_MM = 1.0
+DOVETAIL_LID_CORNER_CHAMFER_MM = 5.0
 DOVETAIL_BOOLEAN_OVERLAP_MM = 0.05
 DOVETAIL_WRAP_REFERENCE_INNER_SPAN_MM = 78.4
 DOVETAIL_WRAP_LEFT_LEDGE_MM = 1.2
@@ -954,11 +955,109 @@ def _add_dovetail_channels(rendered_box, layout: DovetailLayout):
             )
         )
 
-    return rendered_box.cut(side_cutters.union(front_cutter).union(open_end_cutter)).clean()
+    channelled_box = rendered_box.cut(
+        side_cutters.union(front_cutter).union(open_end_cutter)
+    ).clean()
+    exterior_guard = _dovetail_exterior_guard(rendered_box, layout=layout)
+    return channelled_box.union(exterior_guard).clean()
+
+
+def _dovetail_exterior_guard(rendered_box, *, layout: DovetailLayout):
+    """Restore the original exterior skin and closed corners around the lid channels."""
+    import cadquery as cq
+
+    bounding_box = rendered_box.val().BoundingBox()
+    skin_thickness = DOVETAIL_THROAT_MM
+    corner_span = (
+        layout.wall_thickness_mm
+        + DOVETAIL_CHANNEL_INTERIOR_REACH_MM
+        + DOVETAIL_BOOLEAN_OVERLAP_MM
+    )
+    guard_bottom_z = layout.box_top_z - DOVETAIL_FRONT_SHOULDER_DROP_MM
+    guard_height = DOVETAIL_FRONT_SHOULDER_DROP_MM + DOVETAIL_BOOLEAN_OVERLAP_MM
+    guard_center_z = guard_bottom_z + guard_height / 2.0
+
+    if layout.slide_axis == "depth":
+        guard_specs = (
+            (
+                skin_thickness,
+                bounding_box.ylen,
+                bounding_box.xmin + skin_thickness / 2.0,
+                layout.center_y,
+            ),
+            (
+                skin_thickness,
+                bounding_box.ylen,
+                bounding_box.xmax - skin_thickness / 2.0,
+                layout.center_y,
+            ),
+            (
+                bounding_box.xlen,
+                skin_thickness,
+                layout.center_x,
+                bounding_box.ymin + skin_thickness / 2.0,
+            ),
+            (
+                corner_span,
+                corner_span,
+                bounding_box.xmin + corner_span / 2.0,
+                bounding_box.ymin + corner_span / 2.0,
+            ),
+            (
+                corner_span,
+                corner_span,
+                bounding_box.xmax - corner_span / 2.0,
+                bounding_box.ymin + corner_span / 2.0,
+            ),
+        )
+    else:
+        guard_specs = (
+            (
+                bounding_box.xlen,
+                skin_thickness,
+                layout.center_x,
+                bounding_box.ymin + skin_thickness / 2.0,
+            ),
+            (
+                bounding_box.xlen,
+                skin_thickness,
+                layout.center_x,
+                bounding_box.ymax - skin_thickness / 2.0,
+            ),
+            (
+                skin_thickness,
+                bounding_box.ylen,
+                bounding_box.xmin + skin_thickness / 2.0,
+                layout.center_y,
+            ),
+            (
+                corner_span,
+                corner_span,
+                bounding_box.xmin + corner_span / 2.0,
+                bounding_box.ymin + corner_span / 2.0,
+            ),
+            (
+                corner_span,
+                corner_span,
+                bounding_box.xmin + corner_span / 2.0,
+                bounding_box.ymax - corner_span / 2.0,
+            ),
+        )
+
+    guard_parts = tuple(
+        cq.Workplane("XY")
+        .box(width, depth, guard_height)
+        .translate((center_x, center_y, guard_center_z))
+        for width, depth, center_x, center_y in guard_specs
+    )
+    exterior_guard = guard_parts[0]
+    for guard_part in guard_parts[1:]:
+        exterior_guard = exterior_guard.union(guard_part)
+    return rendered_box.intersect(exterior_guard).clean()
 
 
 def _build_dovetail_lid_blank(layout: DovetailLayout):
-    return _dovetail_panel(
+    lid = _dovetail_panel(
         layout=layout,
         length=layout.lid_length,
         bottom_width=layout.lid_bottom_width,
@@ -967,6 +1066,53 @@ def _build_dovetail_lid_blank(layout: DovetailLayout):
         slide_center=layout.lid_slide_center,
         front_inset=DOVETAIL_SIDE_INSET_MM,
     )
+    return _chamfer_dovetail_lid_closed_corners(lid, layout=layout)
+
+
+def _chamfer_dovetail_lid_closed_corners(lid, *, layout: DovetailLayout):
+    """Clear the restored closed box corners while retaining the lid's side dovetails."""
+    import cadquery as cq
+
+    bounding_box = lid.val().BoundingBox()
+    chamfer = DOVETAIL_LID_CORNER_CHAMFER_MM
+    overlap = DOVETAIL_BOOLEAN_OVERLAP_MM
+    if layout.slide_axis == "depth":
+        corner_triangles = (
+            (
+                (bounding_box.xmin - overlap, bounding_box.ymin - overlap),
+                (bounding_box.xmin + chamfer + overlap, bounding_box.ymin - overlap),
+                (bounding_box.xmin - overlap, bounding_box.ymin + chamfer + overlap),
+            ),
+            (
+                (bounding_box.xmax + overlap, bounding_box.ymin - overlap),
+                (bounding_box.xmax - chamfer - overlap, bounding_box.ymin - overlap),
+                (bounding_box.xmax + overlap, bounding_box.ymin + chamfer + overlap),
+            ),
+        )
+    else:
+        corner_triangles = (
+            (
+                (bounding_box.xmin - overlap, bounding_box.ymin - overlap),
+                (bounding_box.xmin + chamfer + overlap, bounding_box.ymin - overlap),
+                (bounding_box.xmin - overlap, bounding_box.ymin + chamfer + overlap),
+            ),
+            (
+                (bounding_box.xmin - overlap, bounding_box.ymax + overlap),
+                (bounding_box.xmin + chamfer + overlap, bounding_box.ymax + overlap),
+                (bounding_box.xmin - overlap, bounding_box.ymax - chamfer - overlap),
+            ),
+        )
+
+    cutter_height = DOVETAIL_LID_THICKNESS_MM + 2.0 * overlap
+    corner_cutters = tuple(
+        cq.Workplane("XY")
+        .polyline(corner_triangle)
+        .close()
+        .extrude(cutter_height)
+        .translate((0.0, 0.0, -overlap))
+        for corner_triangle in corner_triangles
+    )
+    return lid.cut(corner_cutters[0].union(corner_cutters[1])).clean()
 
 
 def _build_dovetail_lid(layout: DovetailLayout, lid_style: str):

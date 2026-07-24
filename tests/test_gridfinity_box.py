@@ -488,6 +488,45 @@ class DovetailLidGeometryTests(unittest.TestCase):
         blocked_lid = assembled_lid.translate((0.0, -0.3, 0.0))
         self.assertGreater(box.intersect(blocked_lid).val().Volume(), 1.0)
 
+
+    def test_lid_closed_corners_are_chamfered_behind_the_exterior_guard(self) -> None:
+        import cadquery as cq
+
+        lid = self.wrap["2x5x3u_dovetail_wrap_lid"]
+        bounds = lid.val().BoundingBox()
+        probe_z = bounds.zmin + 0.1
+
+        self.assertFalse(
+            lid.val().isInside(
+                cq.Vector(bounds.xmin + 1.0, bounds.ymin + 1.0, probe_z),
+                1e-5,
+            )
+        )
+        self.assertFalse(
+            lid.val().isInside(
+                cq.Vector(bounds.xmax - 1.0, bounds.ymin + 1.0, probe_z),
+                1e-5,
+            )
+        )
+        self.assertTrue(
+            lid.val().isInside(
+                cq.Vector(bounds.xmin + 3.0, bounds.ymin + 3.0, probe_z),
+                1e-5,
+            )
+        )
+        self.assertTrue(
+            lid.val().isInside(
+                cq.Vector(bounds.xmax - 3.0, bounds.ymin + 3.0, probe_z),
+                1e-5,
+            )
+        )
+        self.assertTrue(
+            lid.val().isInside(
+                cq.Vector(bounds.xmin + 1.0, bounds.ymax - 1.0, probe_z),
+                1e-5,
+            )
+        )
+
     def test_one_unit_footprint_scales_to_valid_distinct_styles(self) -> None:
         results = {
             lid_style: gridfinity_box.build(
@@ -611,7 +650,7 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         self.assertFalse(
             self.is_inside(
                 self.ziplock_box,
-                left_corner_boundary_x + gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                left_corner_boundary_x + 3.0 * gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
                 bounds.ymin + 1.0,
                 60.3,
             )
@@ -627,7 +666,7 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         self.assertFalse(
             self.is_inside(
                 self.ziplock_box,
-                right_corner_boundary_x - gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                right_corner_boundary_x - 3.0 * gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
                 bounds.ymin + 1.0,
                 60.3,
             )
@@ -641,7 +680,16 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         self.assertTrue(self.is_inside(self.ziplock_box, 0.0, bounds.ymin + 0.62, 60.4))
         self.assertFalse(self.is_inside(self.ziplock_box, 0.0, bounds.ymin + 0.65, 60.4))
         self.assertTrue(self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymin + 0.5, 60.5))
-        self.assertFalse(self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymin + 0.8, 60.5))
+        self.assertTrue(self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymin + 0.8, 60.5))
+        self.assertFalse(
+            self.is_inside(self.ziplock_box, x_minimum + 1.0, bounds.ymin + 1.0, 60.5)
+        )
+        self.assertTrue(
+            self.is_inside(self.ziplock_box, x_minimum + 1.5, bounds.ymin + 1.5, 60.5)
+        )
+        self.assertTrue(
+            self.is_inside(self.ziplock_box, bounds.xmax - 1.5, bounds.ymin + 1.5, 60.5)
+        )
         self.assertTrue(self.is_inside(self.ziplock_box, 0.0, bounds.ymax - 1.0, 60.3))
         self.assertFalse(self.is_inside(self.ziplock_box, 0.0, bounds.ymax - 1.0, 60.5))
         self.assertFalse(self.is_inside(self.ziplock_box, x_minimum + 2.3, bounds.ymax - 0.5, 60.5))
@@ -679,7 +727,7 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
             self.is_inside(
                 box,
                 bounds.xmin + 1.0,
-                lower_corner_boundary_y + gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                lower_corner_boundary_y + 3.0 * gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
                 60.3,
             )
         )
@@ -695,7 +743,7 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
             self.is_inside(
                 box,
                 bounds.xmin + 1.0,
-                upper_corner_boundary_y - gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
+                upper_corner_boundary_y - 3.0 * gridfinity_box.DOVETAIL_BOOLEAN_OVERLAP_MM,
                 60.3,
             )
         )
@@ -704,7 +752,16 @@ class DovetailReferenceGeometryTests(unittest.TestCase):
         self.assertTrue(self.is_inside(box, 0.0, bounds.ymin + 0.62, 60.5))
         self.assertFalse(self.is_inside(box, 0.0, bounds.ymin + 0.65, 60.5))
         self.assertTrue(self.is_inside(box, bounds.xmin + 0.5, bounds.ymin + 2.3, 60.5))
-        self.assertFalse(self.is_inside(box, bounds.xmin + 0.8, bounds.ymin + 2.3, 60.5))
+        self.assertTrue(self.is_inside(box, bounds.xmin + 0.8, bounds.ymin + 2.3, 60.5))
+        self.assertFalse(
+            self.is_inside(box, bounds.xmin + 1.0, bounds.ymin + 1.0, 60.5)
+        )
+        self.assertTrue(
+            self.is_inside(box, bounds.xmin + 1.5, bounds.ymin + 1.5, 60.5)
+        )
+        self.assertTrue(
+            self.is_inside(box, bounds.xmin + 1.5, bounds.ymax - 1.5, 60.5)
+        )
         self.assertTrue(self.is_inside(box, bounds.xmax - 1.0, 0.0, 60.3))
         self.assertFalse(self.is_inside(box, bounds.xmax - 1.0, 0.0, 60.5))
         self.assertFalse(self.is_inside(box, bounds.xmax - 0.5, bounds.ymin + 2.3, 60.5))
