@@ -11,6 +11,7 @@ MODEL_MODULES = (
     "print_models.models.monopoly_deal_storage_box",
     "print_models.models.ratchet_toothpaste_tube_squeezer",
     "print_models.models.gridfinity_box",
+    "print_models.models.gridfinity_cup_holder",
     "print_models.models.gridfinity_exact_fit_baseplate",
     "print_models.models.gridfinity_shims",
 )
