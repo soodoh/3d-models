@@ -19,7 +19,8 @@ PRINT_NOTES = (
     "Squeezer' (https://www.printables.com/model/365365), a remix of Luke's 3D model "
     "265248 (https://www.printables.com/model/265248). Licensed CC BY-NC 4.0: "
     "https://creativecommons.org/licenses/by-nc/4.0/. Print the shaft, ratchet, and nut in "
-    "PETG. gap_mm controls both the shaft slot and body throat."
+    "PETG. The shaft is oriented broad-side-down for printing. gap_mm controls both the shaft "
+    "slot and body throat."
 )
 
 DEFAULT_TUBE_WIDTH_MM = 55.0
@@ -38,6 +39,7 @@ THREAD_CREST_HALF_DEGREES = 30.0
 NUT_THREAD_ROOT_RADIUS_MM = 3.324
 NUT_THREAD_MAJOR_RADIUS_MM = 4.275
 NUT_THREAD_CREST_HALF_DEGREES = 35.0
+NUT_HEIGHT_MM = 12.0
 THREAD_PROFILE_SAMPLES = 16
 THREAD_SECTION_DEGREES = 30.0
 
@@ -104,7 +106,11 @@ def _build_shaft(*, tube_width_mm: float, gap_mm: float):
         .box(THREAD_MAJOR_RADIUS_MM * 2.0 + 1.0, SHAFT_DEPTH_MM, THREAD_LENGTH_MM)
         .translate((0.0, 0.0, thread_start + THREAD_LENGTH_MM / 2.0))
     )
-    return shaft.union(threaded_end.intersect(thread_clip)).clean()
+    shaft = shaft.union(threaded_end.intersect(thread_clip)).clean()
+
+    # Put the broad clipped face on the print bed instead of exporting the shaft upright.
+    oriented_shaft = shaft.rotate((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), -90.0)
+    return oriented_shaft.translate((0.0, 0.0, -oriented_shaft.val().BoundingBox().zmin)).clean()
 
 
 def _build_body(*, tube_width_mm: float, gap_mm: float):
@@ -229,6 +235,7 @@ def _build_handle():
 def _build_nut():
     import cadquery as cq
 
+    nut_height = NUT_HEIGHT_MM
     nut = _lobed_loft(
         cq,
         lobes=23,
@@ -236,8 +243,8 @@ def _build_nut():
         sections=(
             (0.0, 6.5, 6.7, 0.0),
             (0.5, 6.5, 7.2, 0.0),
-            (11.5, 6.5, 7.2, 0.0),
-            (12.0, 6.5, 6.7, 0.0),
+            (nut_height - 0.5, 6.5, 7.2, 0.0),
+            (nut_height, 6.5, 6.7, 0.0),
         ),
     )
     threaded_bore = _threaded_bore(
@@ -247,7 +254,8 @@ def _build_nut():
         height=10.1,
     )
     lead_in = _circular_loft(cq, sections=((0.0, 4.45), (0.6, 4.1)))
-    return nut.cut(threaded_bore.union(lead_in)).clean()
+    nut = nut.cut(threaded_bore.union(lead_in)).clean()
+    return nut.rotate((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 180.0).translate((0.0, 0.0, nut_height))
 
 
 def _build_ratchet():
@@ -366,7 +374,9 @@ def _twisted_thread(
     )
     previous_height = 0.0
     for section_height in section_heights[1:]:
-        phase_degrees = -360.0 * section_height / THREAD_PITCH_MM
+        # Positive phase creates a conventional right-hand helix: viewed from the free end,
+        # clockwise nut rotation advances the nut toward the shaft base.
+        phase_degrees = 360.0 * section_height / THREAD_PITCH_MM
         workplane = (
             workplane.workplane(offset=section_height - previous_height)
             .polyline(

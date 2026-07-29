@@ -28,7 +28,7 @@ class RatchetToothpasteTubeSqueezerTests(unittest.TestCase):
     def test_default_envelopes_match_upgraded_stls(self) -> None:
         expected_sizes = {
             "body": (26.0, 26.0, 71.05),
-            "shaft": (15.0, 6.0, 89.0),
+            "shaft": (15.0, 89.0, 6.0),
             "handle": (27.283939, 27.28272, 7.8),
             "ratchet": (18.5, 18.5, 4.0),
             "nut": (14.339522, 14.368098, 12.0),
@@ -40,6 +40,16 @@ class RatchetToothpasteTubeSqueezerTests(unittest.TestCase):
                     (bounds.xlen, bounds.ylen, bounds.zlen), expected_size, strict=True
                 ):
                     self.assertAlmostEqual(actual, expected, delta=0.06)
+
+    def test_shaft_exports_broad_side_flat_on_build_plane(self) -> None:
+        shaft = self.default_parts["shaft"]
+        bounds = shaft.val().BoundingBox()
+        bottom_faces = shaft.faces("<Z").vals()
+
+        self.assertAlmostEqual(bounds.zmin, 0.0, places=5)
+        self.assertAlmostEqual(bounds.zlen, squeezer.SHAFT_DEPTH_MM, delta=0.001)
+        self.assertGreater(bounds.ylen, bounds.zlen * 10.0)
+        self.assertGreater(sum(face.Area() for face in bottom_faces), 300.0)
 
     def test_default_volumes_remain_close_to_upgraded_stls(self) -> None:
         expected_volumes = {
@@ -66,10 +76,13 @@ class RatchetToothpasteTubeSqueezerTests(unittest.TestCase):
 
     def test_tube_width_changes_only_body_and_shaft_lengths(self) -> None:
         wider_parts = squeezer.build(tube_width_mm=65.0)
-        for name in ("body", "shaft"):
-            default_bounds = self.default_parts[name].val().BoundingBox()
-            wider_bounds = wider_parts[name].val().BoundingBox()
-            self.assertAlmostEqual(wider_bounds.zlen - default_bounds.zlen, 10.0, places=5)
+        body_default_bounds = self.default_parts["body"].val().BoundingBox()
+        body_wider_bounds = wider_parts["body"].val().BoundingBox()
+        shaft_default_bounds = self.default_parts["shaft"].val().BoundingBox()
+        shaft_wider_bounds = wider_parts["shaft"].val().BoundingBox()
+
+        self.assertAlmostEqual(body_wider_bounds.zlen - body_default_bounds.zlen, 10.0, places=5)
+        self.assertAlmostEqual(shaft_wider_bounds.ylen - shaft_default_bounds.ylen, 10.0, places=5)
 
         for name in ("handle", "ratchet", "nut"):
             default_shape = self.default_parts[name].val()
@@ -125,7 +138,7 @@ class RatchetToothpasteTubeSqueezerTests(unittest.TestCase):
                 self.assertFalse(ratchet.isInside(cq.Vector(3.0, -8.75, height)))
 
     def test_shaft_uses_one_piece_repeating_thread_instead_of_flexible_tabs(self) -> None:
-        shaft = self.default_parts["shaft"].val()
+        shaft = _shaft_in_assembly_orientation(self.default_parts["shaft"]).val()
         sections = []
         for height in (80.0, 81.25, 85.0):
             section = cq.Workplane("XY").add(shaft).section(height)
@@ -136,26 +149,46 @@ class RatchetToothpasteTubeSqueezerTests(unittest.TestCase):
         self.assertAlmostEqual(sections[0], sections[2], delta=0.01)
         self.assertAlmostEqual(sections[0], 34.8, delta=0.75)
 
-    def test_threaded_shaft_fits_inside_nut_through_screw_motion(self) -> None:
+    def test_thread_is_right_handed_and_fits_through_screw_motion(self) -> None:
         shaft_thread = (
-            self.default_parts["shaft"]
+            _shaft_in_assembly_orientation(self.default_parts["shaft"])
             .intersect(cq.Workplane("XY").box(20.0, 20.0, 10.0).translate((0.0, 0.0, 84.0)))
             .translate((0.0, 0.0, -79.0))
         )
-        nut_thread_region = self.default_parts["nut"].intersect(
+        nut_in_assembly_orientation = (
+            self.default_parts["nut"]
+            .rotate((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 180.0)
+            .translate((0.0, 0.0, squeezer.NUT_HEIGHT_MM))
+        )
+        nut_thread_region = nut_in_assembly_orientation.intersect(
             cq.Workplane("XY").circle(5.0).extrude(10.1)
         )
         for angle_degrees in (45.0, 90.0, 135.0):
             with self.subTest(angle_degrees=angle_degrees):
-                axial_travel = -angle_degrees / 360.0 * squeezer.THREAD_PITCH_MM
+                axial_travel = angle_degrees / 360.0 * squeezer.THREAD_PITCH_MM
                 moving_thread = shaft_thread.rotate(
                     (0.0, 0.0, 0.0), (0.0, 0.0, 1.0), angle_degrees
                 ).translate((0.0, 0.0, axial_travel))
                 interference = moving_thread.intersect(nut_thread_region)
                 self.assertEqual(len(interference.solids().vals()), 0)
 
-        self.assertFalse(self.default_parts["nut"].val().isInside(cq.Vector(0.0, 0.0, 1.0)))
-        self.assertTrue(self.default_parts["nut"].val().isInside(cq.Vector(0.0, 0.0, 11.0)))
+        # Counterclockwise rotation viewed from the free end travels away from the base.
+        # Moving in the former left-hand direction must cross the nut's thread flanks.
+        wrong_way_thread = shaft_thread.rotate((0.0, 0.0, 0.0), (0.0, 0.0, 1.0), 90.0).translate(
+            (0.0, 0.0, -squeezer.THREAD_PITCH_MM / 4.0)
+        )
+        self.assertGreater(wrong_way_thread.intersect(nut_thread_region).val().Volume(), 1.0)
+
+    def test_nut_exports_with_closed_flat_face_on_build_plane(self) -> None:
+        nut = self.default_parts["nut"]
+        bounds = nut.val().BoundingBox()
+        bottom_faces = nut.faces("<Z").vals()
+
+        self.assertAlmostEqual(bounds.zmin, 0.0, places=5)
+        self.assertEqual(len(bottom_faces), 1)
+        self.assertGreater(bottom_faces[0].Area(), 130.0)
+        self.assertTrue(nut.val().isInside(cq.Vector(0.0, 0.0, 0.1)))
+        self.assertFalse(nut.val().isInside(cq.Vector(0.0, 0.0, squeezer.NUT_HEIGHT_MM - 0.1)))
 
     def test_all_parts_export_as_watertight_stls(self) -> None:
         for name, part in self.default_parts.items():
@@ -193,8 +226,15 @@ class RatchetToothpasteTubeSqueezerTests(unittest.TestCase):
                 squeezer.build(**parameters)
 
 
+def _shaft_in_assembly_orientation(shaft):
+    return shaft.translate((0.0, 0.0, -squeezer.SHAFT_DEPTH_MM / 2.0)).rotate(
+        (0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 90.0
+    )
+
+
 def _shaft_slot_width(shaft) -> float:
-    section = cq.Workplane("XY").add(shaft.val()).section(40.0)
+    assembly_shaft = _shaft_in_assembly_orientation(shaft)
+    section = cq.Workplane("XY").add(assembly_shaft.val()).section(40.0)
     bounds = sorted(
         (face.BoundingBox() for face in section.faces().vals()), key=lambda box: box.xmin
     )
