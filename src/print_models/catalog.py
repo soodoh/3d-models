@@ -14,6 +14,7 @@ MODEL_MODULES = (
     "print_models.models.gridfinity_cup_holder",
     "print_models.models.gridfinity_whiskey_snifter",
     "print_models.models.gridfinity_small_snifter",
+    "print_models.models.gridfinity_shot_glass",
     "print_models.models.gridfinity_exact_fit_baseplate",
     "print_models.models.gridfinity_shims",
 )
