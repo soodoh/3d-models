@@ -12,11 +12,10 @@ from print_models.models.platypus_quickdraw_backflush_adapter import PARAMETERS,
 class PlatypusQuickDrawBackflushAdapterTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.parts = build()
-        cls.body = cls.parts["body"].val()
-        cls.gasket = cls.parts["bottle_gasket"].val()
+        cls.adapter = build()
+        cls.shape = cls.adapter.val()
 
-    def test_catalog_exposes_adapter_and_nominal_interfaces(self) -> None:
+    def test_catalog_exposes_both_female_interfaces(self) -> None:
         models = load_models()
 
         self.assertIn("platypus_quickdraw_backflush_adapter", models)
@@ -25,52 +24,51 @@ class PlatypusQuickDrawBackflushAdapterTests(unittest.TestCase):
         self.assertEqual(PARAMETERS["filter_thread_major_diameter_mm"], 33.4)
         self.assertEqual(PARAMETERS["filter_thread_pitch_mm"], 1.5)
 
-    def test_build_returns_rigid_body_and_flexible_gasket(self) -> None:
-        self.assertEqual(set(self.parts), {"body", "bottle_gasket"})
-        self.assertEqual(len(self.parts["body"].solids().vals()), 1)
-        self.assertEqual(len(self.parts["bottle_gasket"].solids().vals()), 1)
+    def test_build_returns_one_adapter_without_a_separate_gasket(self) -> None:
+        self.assertEqual(len(self.adapter.solids().vals()), 1)
 
     def test_adapter_preserves_reference_envelope(self) -> None:
-        bounding_box = self.body.BoundingBox()
+        bounding_box = self.shape.BoundingBox()
 
         self.assertAlmostEqual(bounding_box.xlen, 38.0, places=3)
         self.assertAlmostEqual(bounding_box.ylen, 38.0, places=3)
         self.assertAlmostEqual(bounding_box.zlen, 26.0, places=3)
 
-    def test_sockets_are_connected_by_a_ten_mm_flow_bore(self) -> None:
+    def test_bottle_end_remains_a_female_twenty_eight_mm_socket(self) -> None:
         import cadquery as cq
 
-        self.assertFalse(self.body.isInside(cq.Vector(0.0, 0.0, 13.0), 1e-6))
-        self.assertFalse(self.body.isInside(cq.Vector(4.9, 0.0, 13.0), 1e-6))
-        self.assertTrue(self.body.isInside(cq.Vector(5.1, 0.0, 13.0), 1e-6))
+        self.assertFalse(self.shape.isInside(cq.Vector(12.0, 0.0, 6.0), 1e-6))
+        self.assertTrue(self.shape.isInside(cq.Vector(14.5, 0.0, 6.0), 1e-6))
 
-    def test_internal_shoulder_supports_the_bottle_gasket(self) -> None:
+    def test_filter_end_is_restored_to_a_larger_female_socket(self) -> None:
         import cadquery as cq
 
-        self.assertTrue(self.body.isInside(cq.Vector(8.0, 0.0, 13.0), 1e-6))
-        self.assertFalse(self.body.isInside(cq.Vector(12.0, 0.0, 6.0), 1e-6))
-        self.assertFalse(self.body.isInside(cq.Vector(16.0, 0.0, 23.0), 1e-6))
+        self.assertFalse(self.shape.isInside(cq.Vector(15.5, 0.0, 18.0), 1e-6))
+        self.assertFalse(self.shape.isInside(cq.Vector(16.5, 0.0, 18.0), 1e-6))
+        self.assertTrue(self.shape.isInside(cq.Vector(17.0, 0.0, 18.0), 1e-6))
 
-    def test_gasket_fits_bottle_socket_without_restricting_flow(self) -> None:
-        bounding_box = self.gasket.BoundingBox()
+    def test_full_width_taper_replaces_internal_divider(self) -> None:
+        import cadquery as cq
 
-        self.assertAlmostEqual(bounding_box.xlen, 24.8, places=3)
-        self.assertAlmostEqual(bounding_box.ylen, 24.8, places=3)
-        self.assertAlmostEqual(bounding_box.zlen, 1.0, places=3)
-        expected_volume = math.pi * (12.4**2 - 5.1**2)
-        self.assertAlmostEqual(self.gasket.Volume(), expected_volume, places=3)
+        self.assertFalse(self.shape.isInside(cq.Vector(12.6, 0.0, 12.0), 1e-6))
+        self.assertFalse(self.shape.isInside(cq.Vector(13.5, 0.0, 13.0), 1e-6))
+        self.assertTrue(self.shape.isInside(cq.Vector(14.0, 0.0, 13.0), 1e-6))
+        self.assertFalse(self.shape.isInside(cq.Vector(15.7, 0.0, 15.1), 1e-6))
+        self.assertTrue(self.shape.isInside(cq.Vector(16.0, 0.0, 15.1), 1e-6))
+
+    def test_center_is_open_at_every_stage(self) -> None:
+        import cadquery as cq
+
+        for height_mm in (1.0, 12.0, 13.0, 15.1, 20.0, 25.0):
+            self.assertFalse(self.shape.isInside(cq.Vector(0.0, 0.0, height_mm), 1e-6))
 
     def test_rejects_filter_thread_that_leaves_a_thin_wall(self) -> None:
         with self.assertRaisesRegex(ValueError, "at least a 1.5 mm body wall"):
             build(filter_fit_adjustment_mm=2.0)
 
-    def test_rejects_overlapping_thread_sockets(self) -> None:
-        with self.assertRaisesRegex(ValueError, "at least a 1 mm sealing shoulder"):
-            build(bottle_thread_length_mm=14.0)
-
-    def test_rejects_gasket_that_cannot_enter_bottle_socket(self) -> None:
-        with self.assertRaisesRegex(ValueError, "fit through the bottle-thread opening"):
-            build(gasket_outer_diameter_mm=26.0)
+    def test_rejects_sockets_that_do_not_fit_inside_body(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must fit within body_height_mm"):
+            build(bottle_thread_length_mm=16.0)
 
     def test_rejects_non_finite_fit_adjustment(self) -> None:
         with self.assertRaisesRegex(ValueError, "finite and positive"):
