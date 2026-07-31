@@ -10,6 +10,7 @@ MODEL_MODULES = (
     "print_models.models.five_crowns_storage_box",
     "print_models.models.monopoly_deal_storage_box",
     "print_models.models.ratchet_toothpaste_tube_squeezer",
+    "print_models.models.platypus_quickdraw_backflush_adapter",
     "print_models.models.gridfinity_box",
     "print_models.models.gridfinity_cup_holder",
     "print_models.models.gridfinity_whiskey_snifter",

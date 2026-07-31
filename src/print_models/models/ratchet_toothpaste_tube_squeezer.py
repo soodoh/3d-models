@@ -5,6 +5,8 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 
+from print_models.helical_thread import twisted_thread
+
 NAME = "ratchet_toothpaste_tube_squeezer"
 DESCRIPTION = (
     "Five-part upgraded ratcheting toothpaste tube squeezer with adjustable tube width "
@@ -334,85 +336,29 @@ def _internal_ratchet_teeth(cq):
 
 
 def _threaded_end(cq, *, root_radius: float, major_radius: float, height: float):
-    return _twisted_thread(
+    return twisted_thread(
         cq,
-        root_radius=root_radius,
-        major_radius=major_radius,
+        pitch_mm=THREAD_PITCH_MM,
+        root_radius_mm=root_radius,
+        major_radius_mm=major_radius,
         crest_half_degrees=THREAD_CREST_HALF_DEGREES,
-        height=height,
+        height_mm=height,
+        profile_samples=THREAD_PROFILE_SAMPLES,
+        section_degrees=THREAD_SECTION_DEGREES,
     )
 
 
 def _threaded_bore(cq, *, root_radius: float, major_radius: float, height: float):
-    return _twisted_thread(
+    return twisted_thread(
         cq,
-        root_radius=root_radius,
-        major_radius=major_radius,
+        pitch_mm=THREAD_PITCH_MM,
+        root_radius_mm=root_radius,
+        major_radius_mm=major_radius,
         crest_half_degrees=NUT_THREAD_CREST_HALF_DEGREES,
-        height=height,
+        height_mm=height,
+        profile_samples=THREAD_PROFILE_SAMPLES,
+        section_degrees=THREAD_SECTION_DEGREES,
     )
-
-
-def _twisted_thread(
-    cq,
-    *,
-    root_radius: float,
-    major_radius: float,
-    crest_half_degrees: float,
-    height: float,
-):
-    axial_step = THREAD_PITCH_MM * THREAD_SECTION_DEGREES / 360.0
-    section_count = math.ceil(height / axial_step)
-    section_heights = tuple(height * index / section_count for index in range(section_count + 1))
-
-    workplane = (
-        cq.Workplane("XY")
-        .polyline(
-            _thread_profile_points(root_radius, major_radius, crest_half_degrees, phase_degrees=0.0)
-        )
-        .close()
-    )
-    previous_height = 0.0
-    for section_height in section_heights[1:]:
-        # Positive phase creates a conventional right-hand helix: viewed from the free end,
-        # clockwise nut rotation advances the nut toward the shaft base.
-        phase_degrees = 360.0 * section_height / THREAD_PITCH_MM
-        workplane = (
-            workplane.workplane(offset=section_height - previous_height)
-            .polyline(
-                _thread_profile_points(
-                    root_radius,
-                    major_radius,
-                    crest_half_degrees,
-                    phase_degrees=phase_degrees,
-                )
-            )
-            .close()
-        )
-        previous_height = section_height
-    return workplane.loft(combine=True, ruled=True)
-
-
-def _thread_profile_points(
-    root_radius: float,
-    major_radius: float,
-    crest_half_degrees: float,
-    *,
-    phase_degrees: float,
-) -> tuple[tuple[float, float], ...]:
-    points = []
-    for index in range(THREAD_PROFILE_SAMPLES):
-        local_angle_degrees = -180.0 + 360.0 * index / THREAD_PROFILE_SAMPLES
-        absolute_angle = abs(local_angle_degrees)
-        if absolute_angle <= crest_half_degrees:
-            radius = major_radius
-        else:
-            radius = major_radius - (major_radius - root_radius) * (
-                (absolute_angle - crest_half_degrees) / (180.0 - crest_half_degrees)
-            )
-        angle = math.radians(local_angle_degrees + phase_degrees)
-        points.append((radius * math.cos(angle), radius * math.sin(angle)))
-    return tuple(points)
 
 
 def _lobed_loft(
