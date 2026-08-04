@@ -360,6 +360,23 @@ class DovetailLidPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "lid_style must be one of"):
             gridfinity_box._resolve_lid_style(1)
 
+    def test_validates_and_normalizes_lid_text(self) -> None:
+        self.assertEqual(
+            gridfinity_box._resolve_lid_text("  Snack  ", lid_style="ziplock"),
+            "Snack",
+        )
+        self.assertEqual(gridfinity_box._resolve_lid_text("   ", lid_style="none"), "")
+        with self.assertRaisesRegex(ValueError, "lid_text must be a string"):
+            gridfinity_box._resolve_lid_text(1, lid_style="ziplock")
+        with self.assertRaisesRegex(ValueError, "lid_text requires"):
+            gridfinity_box.build(
+                unit_width=1,
+                unit_depth=1,
+                unit_height=2,
+                auto_split=False,
+                lid_text="Snack",
+            )
+
     def test_default_mode_preserves_legacy_geometry_and_name(self) -> None:
         result = gridfinity_box.build(
             unit_width=1,
@@ -483,6 +500,44 @@ class DovetailLidGeometryTests(unittest.TestCase):
             gridfinity_box.DOVETAIL_SIDE_INSET_MM,
         )
         self.assertAlmostEqual(top_box.ymax, bottom_box.ymax)
+
+    def test_adds_raised_lid_text_on_the_fixed_width_rail(self) -> None:
+        labeled = gridfinity_box.build(
+            unit_width=2,
+            unit_depth=5,
+            unit_height=3,
+            auto_split=False,
+            lid_style="ziplock",
+            lid_text="Sandwich",
+        )
+        self.assertEqual(
+            tuple(labeled),
+            (
+                "2x5x3u_dovetail_ziplock_lid_text_sandwich_box",
+                "2x5x3u_dovetail_ziplock_lid_text_sandwich_lid",
+            ),
+        )
+        labeled_box = labeled["2x5x3u_dovetail_ziplock_lid_text_sandwich_box"]
+        labeled_lid = labeled["2x5x3u_dovetail_ziplock_lid_text_sandwich_lid"]
+        plain_box = self.ziplock["2x5x3u_dovetail_ziplock_box"]
+        plain_lid = self.ziplock["2x5x3u_dovetail_ziplock_lid"]
+
+        self.assertAlmostEqual(labeled_box.val().Volume(), plain_box.val().Volume(), places=6)
+        self.assertTrue(labeled_lid.val().isValid())
+        self.assertEqual(len(labeled_lid.solids().vals()), 1)
+        self.assertAlmostEqual(
+            labeled_lid.val().BoundingBox().zlen,
+            gridfinity_box.DOVETAIL_LID_THICKNESS_MM + gridfinity_box.DOVETAIL_LID_TEXT_RAISE_MM,
+            places=6,
+        )
+        raised_text = labeled_lid.cut(plain_lid)
+        raised_text_bounds = raised_text.val().BoundingBox()
+        self.assertLess(raised_text_bounds.xmax, 0.0)
+        self.assertAlmostEqual(
+            raised_text_bounds.zmin,
+            gridfinity_box.DOVETAIL_LID_THICKNESS_MM,
+            places=6,
+        )
 
     def test_ziplock_and_wrap_openings_are_distinct(self) -> None:
         ziplock_lid = self.ziplock["2x5x3u_dovetail_ziplock_lid"]

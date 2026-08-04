@@ -11,7 +11,8 @@ from print_models.dovetail import trapezoidal_panel
 NAME = "gridfinity_box"
 DESCRIPTION = (
     "Gridfinity storage box with a stacking lip or optional matching dovetail lid, solid "
-    "no-hole bottom, fractional dividers, and reinforced print-bed-aware splitting."
+    "no-hole bottom, customizable lid text, fractional dividers, and reinforced print-bed-aware "
+    "splitting."
 )
 PARAMETERS = {
     "unit_width": 5,
@@ -30,6 +31,7 @@ PARAMETERS = {
     "wall_thickness_mm": 1.0,
     "divider_thickness_mm": 1.2,
     "lid_style": "none",
+    "lid_text": "",
 }
 PRINT_NOTES = (
     "Divider lists are comma-separated Gridfinity unit specs. Use either position for a "
@@ -49,13 +51,13 @@ PRINT_NOTES = (
     "overlaps a divider. Raised floor specs use x_start-x_end@y_start-y_end:height_mm. Set "
     "lid_style=ziplock or lid_style=wrap to use the hole-free reference body with a 2.4 mm "
     "minimum wall, 7.4 mm floor, low-coordinate profiled stop, and high-coordinate open "
-    "end. Wrap adds an asymmetric semicircular trough and raised shelf. The lid withdraws "
-    "through the high end along the longest footprint axis (depth on ties). Short dovetail "
-    "boxes retain at least 1.2 mm of usable cavity height. Raised floors must remain below "
-    "the lid ceiling and add visible material rather than being buried in the wrap shelf. "
-    "Wrap dividers must cross the open trough rather than lie entirely within that shelf. "
-    "Oversized lids use the box split planes and seam "
-    "bars; breakaway braces are box-only."
+    "end. Set lid_text to add 0.4 mm raised, bold text along the lid rail. Wrap adds an "
+    "asymmetric semicircular trough and raised shelf. The lid withdraws through the high end "
+    "along the longest footprint axis (depth on ties). Short dovetail boxes retain at least "
+    "1.2 mm of usable cavity height. Raised floors must remain below the lid ceiling and add "
+    "visible material rather than being buried in the wrap shelf. Wrap dividers must cross the "
+    "open trough rather than lie entirely within that shelf. Oversized lids use the box split "
+    "planes and seam bars; breakaway braces are box-only."
 )
 
 
@@ -164,6 +166,10 @@ DOVETAIL_OPENING_SIDE_MARGIN_MM = 4.0
 DOVETAIL_REFERENCE_OPENING_OFFSET_MM = 11.8
 DOVETAIL_REFERENCE_NARROW_OPENING_MM = 25.0
 DOVETAIL_REFERENCE_ZIPLOCK_BULGE_MM = 23.7314
+DOVETAIL_LID_TEXT_SIZE_MM = 6.0
+DOVETAIL_LID_TEXT_RAISE_MM = 0.4
+DOVETAIL_LID_TEXT_OVERLAP_MM = 0.05
+DOVETAIL_LID_TEXT_MARGIN_MM = 1.5
 
 
 class FractionalDividerGridfinityBox:
@@ -288,6 +294,33 @@ class FractionalDividerGridfinityBox:
         return self.box.render()
 
 
+def split_filled_gridfinity_cradle(
+    rendered_box,
+    *,
+    unit_width: int,
+    unit_depth: int,
+    unit_height: int,
+    split_width_positions_u: tuple[float, ...],
+    split_depth_positions_u: tuple[float, ...] = (),
+    wall_thickness_mm: float,
+) -> dict[str, object]:
+    """Split a filled cradle without braces that would obstruct its fitted cutout."""
+    return _split_rendered_box(
+        rendered_box,
+        split_width_positions_u=split_width_positions_u,
+        split_depth_positions_u=split_depth_positions_u,
+        unit_width=unit_width,
+        unit_depth=unit_depth,
+        unit_height=unit_height,
+        horizontal_specs=(),
+        vertical_specs=(),
+        wall_thickness_mm=wall_thickness_mm,
+        divider_thickness_mm=1.2,
+        breakaway_brace_top_z=0.0,
+        add_breakaway_braces=False,
+    )
+
+
 def build(
     unit_width: int = 5,
     unit_depth: int = 5,
@@ -305,6 +338,7 @@ def build(
     wall_thickness_mm: float = 1.0,
     divider_thickness_mm: float = 1.2,
     lid_style: str = "none",
+    lid_text: str = "",
 ):
     """Build a Gridfinity storage box with optional custom dividers."""
     _validate_unit_count("unit_width", unit_width)
@@ -315,6 +349,7 @@ def build(
     _validate_positive("wall_thickness_mm", wall_thickness_mm)
     _validate_positive("divider_thickness_mm", divider_thickness_mm)
     normalized_lid_style = _resolve_lid_style(lid_style)
+    normalized_lid_text = _resolve_lid_text(lid_text, lid_style=normalized_lid_style)
     effective_wall_thickness_mm = (
         wall_thickness_mm
         if normalized_lid_style == "none"
@@ -414,6 +449,11 @@ def build(
         rendered_box = _clear_dovetail_interior_headspace(rendered_box, layout=layout)
         rendered_box = _add_dovetail_channels(rendered_box, layout)
         rendered_lid = _build_dovetail_lid(layout, normalized_lid_style)
+        rendered_lid = _add_dovetail_lid_text(
+            rendered_lid,
+            layout=layout,
+            lid_text=normalized_lid_text,
+        )
         breakaway_brace_top_z = layout.channel_floor_z - BREAKAWAY_LIP_CLEARANCE_MM
 
     split_width_positions_u, split_depth_positions_u = _resolve_print_bed_splits(
@@ -478,6 +518,7 @@ def build(
         box_parts,
         lid_parts,
         lid_style=normalized_lid_style,
+        lid_text=normalized_lid_text,
         **naming_parameters,
     )
 
@@ -499,6 +540,16 @@ def _resolve_lid_style(lid_style: str) -> str:
     if normalized not in DOVETAIL_LID_STYLES:
         choices = ", ".join(DOVETAIL_LID_STYLES)
         raise ValueError(f"lid_style must be one of: {choices}")
+    return normalized
+
+
+def _resolve_lid_text(lid_text: str, *, lid_style: str) -> str:
+    if not isinstance(lid_text, str):
+        raise ValueError("lid_text must be a string.")
+
+    normalized = lid_text.strip()
+    if normalized and lid_style == "none":
+        raise ValueError("lid_text requires lid_style=ziplock or lid_style=wrap.")
     return normalized
 
 
@@ -971,9 +1022,7 @@ def _dovetail_exterior_guard(rendered_box, *, layout: DovetailLayout):
     bounding_box = rendered_box.val().BoundingBox()
     skin_thickness = DOVETAIL_THROAT_MM
     corner_span = (
-        layout.wall_thickness_mm
-        + DOVETAIL_CHANNEL_INTERIOR_REACH_MM
-        + DOVETAIL_BOOLEAN_OVERLAP_MM
+        layout.wall_thickness_mm + DOVETAIL_CHANNEL_INTERIOR_REACH_MM + DOVETAIL_BOOLEAN_OVERLAP_MM
     )
     guard_bottom_z = layout.box_top_z - DOVETAIL_FRONT_SHOULDER_DROP_MM
     guard_height = DOVETAIL_FRONT_SHOULDER_DROP_MM + DOVETAIL_BOOLEAN_OVERLAP_MM
@@ -1121,6 +1170,51 @@ def _build_dovetail_lid(layout: DovetailLayout, lid_style: str):
     lid = _build_dovetail_lid_blank(layout)
     opening = _dovetail_lid_opening(layout, lid_style)
     return lid.cut(opening).clean()
+
+
+def _add_dovetail_lid_text(rendered_lid, *, layout: DovetailLayout, lid_text: str):
+    if not lid_text:
+        return rendered_lid
+
+    import cadquery as cq
+
+    top_width = layout.lid_bottom_width - 2.0 * DOVETAIL_SIDE_INSET_MM
+    opening_cross_minimum = -top_width / 2.0 + min(
+        DOVETAIL_REFERENCE_OPENING_OFFSET_MM,
+        max(DOVETAIL_OPENING_SIDE_MARGIN_MM, top_width * 0.156),
+    )
+    rail_width = opening_cross_minimum + top_width / 2.0
+    rail_center = -top_width / 2.0 + rail_width / 2.0
+    text_shape = cq.Workplane("XY").text(
+        lid_text,
+        DOVETAIL_LID_TEXT_SIZE_MM,
+        DOVETAIL_LID_TEXT_RAISE_MM + DOVETAIL_LID_TEXT_OVERLAP_MM,
+        combine=False,
+        font="Arial",
+        kind="bold",
+    )
+    text_bounds = text_shape.val().BoundingBox()
+    available_cross_span = rail_width - 2.0 * DOVETAIL_LID_TEXT_MARGIN_MM
+    available_slide_span = layout.lid_length - 2.0 * DOVETAIL_OPENING_END_MARGIN_MM
+    if text_bounds.ylen > available_cross_span or text_bounds.xlen > available_slide_span:
+        raise ValueError(
+            f"lid_text {lid_text!r} does not fit the selected Gridfinity lid footprint."
+        )
+
+    if layout.slide_axis == "depth":
+        text_shape = text_shape.rotate((0.0, 0.0, 0.0), (0.0, 0.0, 1.0), 90.0)
+        translation = (layout.center_x + rail_center, layout.lid_slide_center)
+    else:
+        translation = (layout.lid_slide_center, layout.center_y + rail_center)
+
+    text_shape = text_shape.translate(
+        (
+            translation[0],
+            translation[1],
+            DOVETAIL_LID_THICKNESS_MM - DOVETAIL_LID_TEXT_OVERLAP_MM,
+        )
+    )
+    return rendered_lid.union(text_shape).clean()
 
 
 def _add_dovetail_lid_split_bars(
@@ -1549,6 +1643,7 @@ def _named_dovetail_export_parts(
     lid_parts: dict[str, object],
     *,
     lid_style: str,
+    lid_text: str,
     unit_width: int,
     unit_depth: int,
     unit_height: int,
@@ -1571,8 +1666,9 @@ def _named_dovetail_export_parts(
         scoops=scoops,
     )
     named_parts = {}
+    label_suffix = f"_lid_text_{_format_lid_text(lid_text)}" if lid_text else ""
     for part_kind, parts in (("box", box_parts), ("lid", lid_parts)):
-        part_base_name = f"{base_name}_dovetail_{lid_style}_{part_kind}"
+        part_base_name = f"{base_name}_dovetail_{lid_style}{label_suffix}_{part_kind}"
         if set(parts) == {"whole"}:
             named_parts[part_base_name] = parts["whole"]
         else:
@@ -1649,6 +1745,17 @@ def _format_positions(positions: tuple[float, ...]) -> str:
 
 def _format_decimal(value: float) -> str:
     return f"{value:g}".replace(".", "p")
+
+
+def _format_lid_text(lid_text: str) -> str:
+    return (
+        "_".join(
+            "".join(
+                character.lower() if character.isalnum() else " " for character in lid_text
+            ).split()
+        )
+        or "label"
+    )
 
 
 def _resolve_split_positions(
