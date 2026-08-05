@@ -20,6 +20,7 @@ MODEL_MODULES = (
     "print_models.models.gridfinity_tea_cup",
     "print_models.models.gridfinity_shot_glass",
     "print_models.models.gridfinity_oxo_cocktail_strainer",
+    "print_models.models.gridfinity_large_strainer",
     "print_models.models.gridfinity_hawthorne_strainer",
     "print_models.models.gridfinity_exact_fit_baseplate",
     "print_models.models.gridfinity_shims",
