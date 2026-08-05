@@ -16,6 +16,7 @@ MODEL_MODULES = (
     "print_models.models.gridfinity_whiskey_snifter",
     "print_models.models.gridfinity_small_snifter",
     "print_models.models.gridfinity_double_jigger",
+    "print_models.models.gridfinity_oxo_angled_jigger",
     "print_models.models.gridfinity_tea_cup",
     "print_models.models.gridfinity_shot_glass",
     "print_models.models.gridfinity_oxo_cocktail_strainer",
