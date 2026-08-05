@@ -15,8 +15,8 @@ PARAMETERS = {
     "strainer_diameter_mm": 82.0,
     "small_handle_width_mm": 17.7,
     "wide_handle_width_mm": 26.0,
-    "wide_handle_length_mm": 71.0,
-    "handle_ferrule_length_mm": 12.0,
+    "wide_handle_length_mm": 73.0,
+    "wide_handle_straight_length_mm": 64.0,
     "thick_handle_height_mm": 12.7,
     "small_handle_height_mm": 3.5,
     "finger_scoop_diameter_mm": 20.0,
@@ -28,11 +28,11 @@ PARAMETERS = {
 }
 PRINT_NOTES = (
     "The strainer drops in with its open face downward and its mesh dome upward. A straight-sided "
-    "18 mm pocket follows the full rim, dual-rail handle, thick handle, and U-shaped tip-loop "
-    "silhouette, avoiding an insertion-blocking undercut. Paired rounded finger scoops beside the "
-    "wide handle provide pinch access for removal. The strainer is turned 24.7 degrees to fit the "
-    "3x5 footprint with 1 mm clearance. The printed holder remains entirely within the normal 4U "
-    "Gridfinity height and has no elevated supports."
+    "18 mm pocket follows the full rim, dual-rail handle, measured 73 x 26 mm thick-handle "
+    "footprint, and the full outer tip-loop footprint, avoiding an insertion-blocking undercut. "
+    "Paired rounded finger scoops beside the wide handle provide pinch access for removal. The "
+    "strainer is turned 24.7 degrees to fit the 3x5 footprint with 1 mm clearance. The printed "
+    "holder remains entirely within the normal 4U Gridfinity height and has no elevated supports."
 )
 
 GRIDFINITY_HEIGHT_UNIT_MM = 7.0
@@ -51,8 +51,8 @@ def build(
     strainer_diameter_mm: float = 82.0,
     small_handle_width_mm: float = 17.7,
     wide_handle_width_mm: float = 26.0,
-    wide_handle_length_mm: float = 71.0,
-    handle_ferrule_length_mm: float = 12.0,
+    wide_handle_length_mm: float = 73.0,
+    wide_handle_straight_length_mm: float = 64.0,
     thick_handle_height_mm: float = 12.7,
     small_handle_height_mm: float = 3.5,
     finger_scoop_diameter_mm: float = 20.0,
@@ -75,7 +75,7 @@ def build(
         small_handle_width_mm=small_handle_width_mm,
         wide_handle_width_mm=wide_handle_width_mm,
         wide_handle_length_mm=wide_handle_length_mm,
-        handle_ferrule_length_mm=handle_ferrule_length_mm,
+        wide_handle_straight_length_mm=wide_handle_straight_length_mm,
         thick_handle_height_mm=thick_handle_height_mm,
         small_handle_height_mm=small_handle_height_mm,
         finger_scoop_diameter_mm=finger_scoop_diameter_mm,
@@ -120,7 +120,7 @@ def build(
         small_handle_width_mm=small_handle_width_mm,
         wide_handle_width_mm=wide_handle_width_mm,
         wide_handle_length_mm=wide_handle_length_mm,
-        handle_ferrule_length_mm=handle_ferrule_length_mm,
+        wide_handle_straight_length_mm=wide_handle_straight_length_mm,
         small_handle_height_mm=small_handle_height_mm,
         finger_scoop_diameter_mm=finger_scoop_diameter_mm,
         tip_loop_length_mm=tip_loop_length_mm,
@@ -156,7 +156,7 @@ def _build_face_down_pocket_cutter(
     small_handle_width_mm: float,
     wide_handle_width_mm: float,
     wide_handle_length_mm: float,
-    handle_ferrule_length_mm: float,
+    wide_handle_straight_length_mm: float,
     small_handle_height_mm: float,
     finger_scoop_diameter_mm: float,
     tip_loop_length_mm: float,
@@ -184,8 +184,7 @@ def _build_face_down_pocket_cutter(
         start_x=object_start_x,
         end_x=wide_handle_end_x,
         wide_handle_width_mm=wide_handle_width_mm,
-        small_handle_width_mm=small_handle_width_mm,
-        ferrule_length_mm=handle_ferrule_length_mm,
+        wide_handle_straight_length_mm=wide_handle_straight_length_mm,
         bottom_z=pocket_bottom_z,
         top_z=cutter_top_z,
         fit_clearance_mm=fit_clearance_mm,
@@ -210,7 +209,6 @@ def _build_face_down_pocket_cutter(
         attachment_x=bowl_right_x - TIP_LOOP_ATTACHMENT_OVERLAP_MM,
         object_end_x=object_end_x,
         outer_width_mm=tip_loop_outer_width_mm,
-        wire_diameter_mm=small_handle_height_mm,
         bottom_z=pocket_bottom_z,
         top_z=cutter_top_z,
         fit_clearance_mm=fit_clearance_mm,
@@ -249,50 +247,39 @@ def _build_wide_handle_cutter(
     start_x: float,
     end_x: float,
     wide_handle_width_mm: float,
-    small_handle_width_mm: float,
-    ferrule_length_mm: float,
+    wide_handle_straight_length_mm: float,
     bottom_z: float,
     top_z: float,
     fit_clearance_mm: float,
 ):
-    """Build the rounded black handle and its tapered metal ferrule from the top view."""
+    """Build the measured thick-handle footprint with shallow elliptical end curves."""
     import cadquery as cq
 
-    cleared_wide_width = wide_handle_width_mm + 2.0 * fit_clearance_mm
-    cleared_small_width = small_handle_width_mm + 2.0 * fit_clearance_mm
-    tip_radius = cleared_wide_width / 2.0
-    tip_center_x = start_x + wide_handle_width_mm / 2.0
-    ferrule_start_x = end_x - ferrule_length_mm
+    physical_length_mm = end_x - start_x
+    end_curve_depth_mm = (physical_length_mm - wide_handle_straight_length_mm) / 2.0
+    cleared_width_mm = wide_handle_width_mm + 2.0 * fit_clearance_mm
+    cleared_end_curve_depth_mm = end_curve_depth_mm + fit_clearance_mm
+    start_curve_center_x = start_x + end_curve_depth_mm
+    end_curve_center_x = end_x - end_curve_depth_mm
+    center_x = (start_curve_center_x + end_curve_center_x) / 2.0
     height_mm = top_z - bottom_z
-    rounded_tip = (
-        cq.Workplane("XY", origin=(tip_center_x, 0.0, bottom_z))
-        .circle(tip_radius)
-        .extrude(height_mm)
-    )
+
     body = (
-        cq.Workplane("XY", origin=(0.0, 0.0, bottom_z))
-        .box(
-            ferrule_start_x - tip_center_x,
-            cleared_wide_width,
-            height_mm,
-            centered=(True, True, False),
-        )
-        .translate(((tip_center_x + ferrule_start_x) / 2.0, 0.0, 0.0))
-    )
-    ferrule = (
-        cq.Workplane("XY", origin=(0.0, 0.0, bottom_z))
-        .polyline(
-            (
-                (ferrule_start_x - fit_clearance_mm, -cleared_wide_width / 2.0),
-                (end_x + fit_clearance_mm, -cleared_small_width / 2.0),
-                (end_x + fit_clearance_mm, cleared_small_width / 2.0),
-                (ferrule_start_x - fit_clearance_mm, cleared_wide_width / 2.0),
-            )
-        )
-        .close()
+        cq.Workplane("XY", origin=(center_x, 0.0, bottom_z))
+        .rect(wide_handle_straight_length_mm, cleared_width_mm)
         .extrude(height_mm)
     )
-    return rounded_tip.union(body).union(ferrule).clean()
+    start_curve = (
+        cq.Workplane("XY", origin=(start_curve_center_x, 0.0, bottom_z))
+        .ellipse(cleared_end_curve_depth_mm, cleared_width_mm / 2.0)
+        .extrude(height_mm)
+    )
+    end_curve = (
+        cq.Workplane("XY", origin=(end_curve_center_x, 0.0, bottom_z))
+        .ellipse(cleared_end_curve_depth_mm, cleared_width_mm / 2.0)
+        .extrude(height_mm)
+    )
+    return body.union(start_curve).union(end_curve).clean()
 
 
 def _build_finger_scoop_cutters(
@@ -359,46 +346,30 @@ def _build_tip_loop_cutter(
     attachment_x: float,
     object_end_x: float,
     outer_width_mm: float,
-    wire_diameter_mm: float,
     bottom_z: float,
     top_z: float,
     fit_clearance_mm: float,
 ):
-    """Build a vertical-wall U-shaped recess for the wire loop."""
+    """Build a full-depth recess for the complete outer footprint of the tip loop."""
     import cadquery as cq
 
     height_mm = top_z - bottom_z
-    channel_width = wire_diameter_mm + 2.0 * fit_clearance_mm
     outer_x_radius = object_end_x - attachment_x + fit_clearance_mm
     outer_y_radius = outer_width_mm / 2.0 + fit_clearance_mm
-    inner_x_radius = outer_x_radius - channel_width
-    inner_y_radius = outer_y_radius - channel_width
     outer = (
         cq.Workplane("XY", origin=(attachment_x, 0.0, bottom_z))
         .ellipse(outer_x_radius, outer_y_radius)
         .extrude(height_mm)
     )
-    inner = (
-        cq.Workplane("XY", origin=(attachment_x, 0.0, bottom_z - BOOLEAN_OVERLAP_MM))
-        .ellipse(inner_x_radius, inner_y_radius)
-        .extrude(height_mm + 2.0 * BOOLEAN_OVERLAP_MM)
+    right_half = _build_block(
+        x_min=attachment_x - BOOLEAN_OVERLAP_MM,
+        x_max=attachment_x + outer_x_radius + BOOLEAN_OVERLAP_MM,
+        y_min=-outer_y_radius - BOOLEAN_OVERLAP_MM,
+        y_max=outer_y_radius + BOOLEAN_OVERLAP_MM,
+        z_min=bottom_z - BOOLEAN_OVERLAP_MM,
+        z_max=top_z + BOOLEAN_OVERLAP_MM,
     )
-    right_half = (
-        cq.Workplane("XY")
-        .box(
-            outer_x_radius + 2.0,
-            2.0 * outer_y_radius + 2.0,
-            height_mm + 2.0 * BOOLEAN_OVERLAP_MM,
-        )
-        .translate(
-            (
-                attachment_x + outer_x_radius / 2.0,
-                0.0,
-                bottom_z + height_mm / 2.0,
-            )
-        )
-    )
-    return outer.cut(inner).intersect(right_half).clean()
+    return outer.intersect(right_half).clean()
 
 
 def _build_capsule_cutter(
@@ -469,7 +440,7 @@ def _validate_parameters(
     small_handle_width_mm: float,
     wide_handle_width_mm: float,
     wide_handle_length_mm: float,
-    handle_ferrule_length_mm: float,
+    wide_handle_straight_length_mm: float,
     thick_handle_height_mm: float,
     small_handle_height_mm: float,
     finger_scoop_diameter_mm: float,
@@ -494,7 +465,7 @@ def _validate_parameters(
         ("small_handle_width_mm", small_handle_width_mm),
         ("wide_handle_width_mm", wide_handle_width_mm),
         ("wide_handle_length_mm", wide_handle_length_mm),
-        ("handle_ferrule_length_mm", handle_ferrule_length_mm),
+        ("wide_handle_straight_length_mm", wide_handle_straight_length_mm),
         ("thick_handle_height_mm", thick_handle_height_mm),
         ("small_handle_height_mm", small_handle_height_mm),
         ("finger_scoop_diameter_mm", finger_scoop_diameter_mm),
@@ -517,8 +488,10 @@ def _validate_parameters(
     handle_side_length_mm = overall_length_mm - strainer_diameter_mm - tip_loop_length_mm
     if wide_handle_length_mm >= handle_side_length_mm:
         raise ValueError("wide_handle_length_mm must leave space for the small handle rails.")
-    if handle_ferrule_length_mm >= wide_handle_length_mm:
-        raise ValueError("handle_ferrule_length_mm must be shorter than wide_handle_length_mm.")
+    if wide_handle_straight_length_mm >= wide_handle_length_mm:
+        raise ValueError(
+            "wide_handle_straight_length_mm must be shorter than wide_handle_length_mm."
+        )
     if small_handle_width_mm > wide_handle_width_mm:
         raise ValueError("small_handle_width_mm must not exceed wide_handle_width_mm.")
     if small_handle_height_mm > small_handle_width_mm / 2.0:
@@ -527,11 +500,3 @@ def _validate_parameters(
         raise ValueError("small_handle_height_mm must not exceed thick_handle_height_mm.")
     if tip_loop_outer_width_mm > strainer_diameter_mm:
         raise ValueError("tip_loop_outer_width_mm must not exceed strainer_diameter_mm.")
-
-    cleared_wire_width = small_handle_height_mm + 2.0 * fit_clearance_mm
-    if tip_loop_length_mm + TIP_LOOP_ATTACHMENT_OVERLAP_MM <= cleared_wire_width:
-        raise ValueError("tip_loop_length_mm is too short for the cleared U-shaped wire recess.")
-    if tip_loop_outer_width_mm / 2.0 + fit_clearance_mm <= cleared_wire_width:
-        raise ValueError(
-            "tip_loop_outer_width_mm is too narrow for the cleared U-shaped wire recess."
-        )

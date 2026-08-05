@@ -9,6 +9,7 @@ from print_models.catalog import load_models
 from print_models.models.gridfinity_oxo_cocktail_strainer import (
     PARAMETERS,
     _build_face_down_pocket_cutter,
+    _build_wide_handle_cutter,
     _position_plan_cutter,
     build,
 )
@@ -20,8 +21,8 @@ POCKET_PARAMETERS = {
     "strainer_diameter_mm": 82.0,
     "small_handle_width_mm": 17.7,
     "wide_handle_width_mm": 26.0,
-    "wide_handle_length_mm": 71.0,
-    "handle_ferrule_length_mm": 12.0,
+    "wide_handle_length_mm": 73.0,
+    "wide_handle_straight_length_mm": 64.0,
     "small_handle_height_mm": 3.5,
     "finger_scoop_diameter_mm": 20.0,
     "tip_loop_length_mm": 15.0,
@@ -46,6 +47,9 @@ class OxoCocktailStrainerPocketTests(unittest.TestCase):
         self.assertEqual(PARAMETERS["pocket_depth_mm"], 18.0)
         self.assertEqual(PARAMETERS["overall_length_mm"], 214.0)
         self.assertEqual(PARAMETERS["strainer_diameter_mm"], 82.0)
+        self.assertEqual(PARAMETERS["wide_handle_width_mm"], 26.0)
+        self.assertEqual(PARAMETERS["wide_handle_length_mm"], 73.0)
+        self.assertEqual(PARAMETERS["wide_handle_straight_length_mm"], 64.0)
         self.assertEqual(PARAMETERS["finger_scoop_diameter_mm"], 20.0)
         self.assertEqual(PARAMETERS["strainer_rotation_degrees"], 24.7)
 
@@ -73,13 +77,35 @@ class OxoCocktailStrainerPocketTests(unittest.TestCase):
             self.assertTrue(self.shape.isInside(cq.Vector(-75.05, 20.0, z), 1e-6))
             self.assertTrue(self.shape.isInside(cq.Vector(-75.05, -20.0, z), 1e-6))
 
-    def test_pocket_preserves_u_shaped_loop_recess(self) -> None:
+    def test_pocket_clears_full_tip_loop_footprint(self) -> None:
         import cadquery as cq
 
         for z in (10.1, 27.9):
             self.assertTrue(self.shape.isInside(cq.Vector(99.0, 12.0, z), 1e-6))
-            self.assertFalse(self.shape.isInside(cq.Vector(99.0, 0.0, z), 1e-6))
+            self.assertTrue(self.shape.isInside(cq.Vector(99.0, 0.0, z), 1e-6))
             self.assertTrue(self.shape.isInside(cq.Vector(107.0, 0.0, z), 1e-6))
+
+    def test_wide_handle_uses_measured_shallow_end_curves(self) -> None:
+        import cadquery as cq
+
+        handle = _build_wide_handle_cutter(
+            start_x=0.0,
+            end_x=73.0,
+            wide_handle_width_mm=26.0,
+            wide_handle_straight_length_mm=64.0,
+            bottom_z=10.0,
+            top_z=28.2,
+            fit_clearance_mm=1.0,
+        ).val()
+        bounding_box = handle.BoundingBox()
+
+        self.assertAlmostEqual(bounding_box.xlen, 75.0, places=3)
+        self.assertAlmostEqual(bounding_box.ylen, 28.0, places=3)
+        for z in (10.1, 28.1):
+            self.assertTrue(handle.isInside(cq.Vector(0.0, 8.0, z), 1e-6))
+            self.assertFalse(handle.isInside(cq.Vector(0.0, 9.0, z), 1e-6))
+            self.assertTrue(handle.isInside(cq.Vector(4.5, 13.9, z), 1e-6))
+            self.assertTrue(handle.isInside(cq.Vector(68.5, 13.9, z), 1e-6))
 
 
 class OxoCocktailStrainerGeometryTests(unittest.TestCase):
@@ -112,8 +138,8 @@ class OxoCocktailStrainerGeometryTests(unittest.TestCase):
     def test_diagonal_pocket_fits_three_by_five_footprint(self) -> None:
         bounding_box = self.positioned_cutter.val().BoundingBox()
 
-        self.assertAlmostEqual(bounding_box.xlen, 198.935, places=3)
-        self.assertAlmostEqual(bounding_box.ylen, 122.842, places=3)
+        self.assertAlmostEqual(bounding_box.xlen, 200.351, places=3)
+        self.assertAlmostEqual(bounding_box.ylen, 122.466, places=3)
         self.assertGreaterEqual(bounding_box.xmin, -103.75)
         self.assertLessEqual(bounding_box.xmax, 103.75)
         self.assertGreaterEqual(bounding_box.ymin, -61.75)
@@ -155,6 +181,8 @@ class OxoCocktailStrainerGeometryTests(unittest.TestCase):
             build(strainer_rotation_degrees=0.0)
         with self.assertRaisesRegex(ValueError, "does not fit"):
             build(unit_depth=2)
+        with self.assertRaisesRegex(ValueError, "must be shorter"):
+            build(wide_handle_straight_length_mm=73.0)
 
     def test_rejects_pocket_that_cannot_preserve_the_cavity_floor(self) -> None:
         with self.assertRaisesRegex(ValueError, "preserving a 2 mm cavity floor"):
