@@ -23,6 +23,7 @@ PARAMETERS = {
     "split_width_u": "",
     "split_depth": "",
     "auto_split": True,
+    "split_supports": True,
     "max_print_width": 240.0,
     "max_print_depth": 210.0,
     "allow_rotation": True,
@@ -42,8 +43,8 @@ PRINT_NOTES = (
     "depth. Positions and spans may be decimal units. Boxes are automatically split on "
     "Gridfinity unit boundaries when they exceed the default 240 x 210 mm safe print area "
     "for a Prusa CORE One+. Set auto_split=false to disable this, or provide explicit "
-    "split positions to control either axis. Split stacking-lip boxes up to 5U high omit "
-    "breakaway supports. Split stacking-lip boxes 6U and taller receive removable brace "
+    "split positions to control either axis. Set split_supports=false to omit breakaway "
+    "braces on split stacking-lip boxes. Split stacking-lip boxes up to 5U high omit "
     "lattices unless that side has a full-span parallel divider within 2U of the split. "
     "Wrap and ziplock containers omit supports at every height. All supports use 0.8 mm "
     "thickness, 2.4 mm upright width, and six 2.4 mm crossbars ending below the stacking "
@@ -330,6 +331,7 @@ def build(
     split_width_u: str | Sequence[float] = "",
     split_depth: str | Sequence[float] = "",
     auto_split: bool = True,
+    split_supports: bool = True,
     max_print_width: float = 240.0,
     max_print_depth: float = 210.0,
     allow_rotation: bool = True,
@@ -481,7 +483,7 @@ def build(
         wall_thickness_mm=effective_wall_thickness_mm,
         divider_thickness_mm=divider_thickness_mm,
         breakaway_brace_top_z=breakaway_brace_top_z,
-        add_breakaway_braces=normalized_lid_style == "none",
+        add_breakaway_braces=normalized_lid_style == "none" and split_supports,
     )
     naming_parameters = {
         "unit_width": unit_width,
