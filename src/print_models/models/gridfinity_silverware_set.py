@@ -52,6 +52,10 @@ PARAMETERS = {
     "knife_slot_clearance_mm": 0.5,
     "cavity_gap_mm": 4.0,
     "knife_rib_mm": 1.2,
+    "knife_lift_trough_width_mm": 76.0,
+    "knife_lift_trough_length_mm": 26.0,
+    "knife_lift_trough_extra_depth_mm": 9.0,
+    "knife_lift_trough_bottom_radius_mm": 3.0,
     "finger_relief_diameter_mm": 24.0,
     "wall_thickness_mm": 1.0,
 }
@@ -64,7 +68,8 @@ PRINT_NOTES = (
     "outside those dimensions. The "
     "knife module stores eight knives side by side, blade-edge down, in stepped slots: the 125 mm "
     "handle sections are shallow and 8.5 mm wide by default, while the 111 mm blade sections are "
-    "deeper and 3 mm wide. Each 6U module is split at 3U into front and back STL parts for the "
+    "deeper and 3 mm wide. A rounded transverse trough beneath the handle centers provides room to "
+    "lift the knives. Each 6U module is split at 3U into front and back STL parts for the "
     "configured print bed. Place each matching pair together on adjacent Gridfinity cells; the "
     "fitted cavity crosses the flush center seam. Print with the Gridfinity bases down."
 )
@@ -93,7 +98,7 @@ _SPOON_BOWL_WIDTH_PROFILE = (
     (0.90, 0.95),
     (0.95, 0.78),
     (0.98, 0.55),
-    (1.00, 0.14),
+    (1.00, 0.00),
 )
 
 
@@ -248,6 +253,10 @@ def build(
     knife_slot_clearance_mm: float = 0.5,
     cavity_gap_mm: float = 4.0,
     knife_rib_mm: float = 1.2,
+    knife_lift_trough_width_mm: float = 76.0,
+    knife_lift_trough_length_mm: float = 26.0,
+    knife_lift_trough_extra_depth_mm: float = 9.0,
+    knife_lift_trough_bottom_radius_mm: float = 3.0,
     finger_relief_diameter_mm: float = 24.0,
     wall_thickness_mm: float = 1.0,
 ):
@@ -290,6 +299,10 @@ def build(
         knife_slot_clearance_mm=knife_slot_clearance_mm,
         cavity_gap_mm=cavity_gap_mm,
         knife_rib_mm=knife_rib_mm,
+        knife_lift_trough_width_mm=knife_lift_trough_width_mm,
+        knife_lift_trough_length_mm=knife_lift_trough_length_mm,
+        knife_lift_trough_extra_depth_mm=knife_lift_trough_extra_depth_mm,
+        knife_lift_trough_bottom_radius_mm=knife_lift_trough_bottom_radius_mm,
         finger_relief_diameter_mm=finger_relief_diameter_mm,
         wall_thickness_mm=wall_thickness_mm,
     )
@@ -374,6 +387,10 @@ def build(
         vertical_clearance_mm=vertical_clearance_mm,
         knife_slot_clearance_mm=knife_slot_clearance_mm,
         knife_rib_mm=knife_rib_mm,
+        knife_lift_trough_width_mm=knife_lift_trough_width_mm,
+        knife_lift_trough_length_mm=knife_lift_trough_length_mm,
+        knife_lift_trough_extra_depth_mm=knife_lift_trough_extra_depth_mm,
+        knife_lift_trough_bottom_radius_mm=knife_lift_trough_bottom_radius_mm,
         wall_thickness_mm=wall_thickness_mm,
     )
 
@@ -525,6 +542,10 @@ def _build_knife_module(
     vertical_clearance_mm: float,
     knife_slot_clearance_mm: float,
     knife_rib_mm: float,
+    knife_lift_trough_width_mm: float,
+    knife_lift_trough_length_mm: float,
+    knife_lift_trough_extra_depth_mm: float,
+    knife_lift_trough_bottom_radius_mm: float,
     wall_thickness_mm: float,
 ):
     from cqgridfinity import GR_BASE_HEIGHT, GR_FLOOR
@@ -555,11 +576,20 @@ def _build_knife_module(
 
     handle_depth = knife_handle_width_mm + vertical_clearance_mm
     blade_depth = knife_blade_width_mm + vertical_clearance_mm
+    trough_depth = handle_depth + knife_lift_trough_extra_depth_mm
     _validate_cavity_floor(
         deck_top_z=deck_top_z,
         floor_top_z=floor_top_z,
-        pocket_depth_mm=max(handle_depth, blade_depth),
+        pocket_depth_mm=max(trough_depth, blade_depth),
     )
+    if knife_lift_trough_width_mm + 2.0 * MINIMUM_DECK_RING_MM > inner_x_max - inner_x_min:
+        raise ValueError("The knife lift trough does not leave a safe deck ring.")
+    if knife_lift_trough_length_mm >= knife_handle_length_mm:
+        raise ValueError("The knife lift trough must leave handle support on both sides.")
+    if knife_lift_trough_bottom_radius_mm * 2.0 > min(
+        knife_lift_trough_width_mm, knife_lift_trough_length_mm
+    ):
+        raise ValueError("The knife lift trough bottom radius is too large.")
     first_center_x = -(knife_count - 1) * slot_pitch / 2.0
     handle_start_y = -knife_length_mm / 2.0 - knife_slot_clearance_mm
     transition_y = -knife_length_mm / 2.0 + knife_handle_length_mm
@@ -591,6 +621,17 @@ def _build_knife_module(
         slot = handle.union(blade)
         cutter = slot if cutter is None else cutter.union(slot)
 
+    lift_trough = _build_rounded_trough(
+        center_x=0.0,
+        center_y=(handle_start_y + transition_y) / 2.0,
+        width_mm=knife_lift_trough_width_mm,
+        length_mm=knife_lift_trough_length_mm,
+        bottom_z=deck_top_z - trough_depth,
+        top_z=deck_top_z + BOOLEAN_OVERLAP_MM,
+        bottom_radius_mm=knife_lift_trough_bottom_radius_mm,
+    )
+    cutter = cutter.union(lift_trough)
+
     fill = _build_block(
         x_min=inner_x_min,
         x_max=inner_x_max,
@@ -600,6 +641,36 @@ def _build_knife_module(
         z_max=deck_top_z,
     )
     return box.union(fill).cut(cutter).clean()
+
+
+def _build_rounded_trough(
+    *,
+    center_x: float,
+    center_y: float,
+    width_mm: float,
+    length_mm: float,
+    bottom_z: float,
+    top_z: float,
+    bottom_radius_mm: float,
+):
+    import cadquery as cq
+
+    radius = length_mm / 2.0
+    straight_width = width_mm - length_mm
+    height = top_z - bottom_z
+    trough = (
+        cq.Workplane("XY", origin=(center_x, center_y, bottom_z))
+        .rect(straight_width, length_mm)
+        .extrude(height)
+    )
+    for cap_center_x in (-straight_width / 2.0, straight_width / 2.0):
+        cap = (
+            cq.Workplane("XY", origin=(center_x + cap_center_x, center_y, bottom_z))
+            .circle(radius)
+            .extrude(height)
+        )
+        trough = trough.union(cap)
+    return trough.clean().edges("<Z").fillet(bottom_radius_mm)
 
 
 def _render_empty_module(
@@ -644,7 +715,9 @@ def _build_utensil_cutter(
         )
         for length_fraction, width_ratio in _monotonic_profile_samples(width_profile)
     ]
-    right_points[-1] = (right_points[-1][0], cleared_end_y)
+    profile_closes_at_end = width_profile[-1][1] == 0.0
+    if not profile_closes_at_end:
+        right_points[-1] = (right_points[-1][0], cleared_end_y)
     left_points = [(-x, y) for x, y in reversed(right_points)]
     outline_points = [
         (0.0, cleared_start_y),
@@ -658,6 +731,13 @@ def _build_utensil_cutter(
         .close()
         .extrude(top_z - bottom_z)
     )
+    if profile_closes_at_end and fit_clearance_mm > 0.0:
+        end_clearance = (
+            cq.Workplane("XY", origin=(center_x, center_y + object_end_y, bottom_z))
+            .circle(fit_clearance_mm)
+            .extrude(top_z - bottom_z)
+        )
+        profile = profile.union(end_clearance)
     relief_center_y = object_start_y + min(28.0, length_mm * 0.16)
     relief = (
         cq.Workplane("XY", origin=(center_x, center_y + relief_center_y, bottom_z))
