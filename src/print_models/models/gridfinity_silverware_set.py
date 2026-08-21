@@ -52,10 +52,7 @@ PARAMETERS = {
     "knife_slot_clearance_mm": 0.5,
     "cavity_gap_mm": 4.0,
     "knife_rib_mm": 1.2,
-    "knife_lift_trough_width_mm": 76.0,
-    "knife_lift_trough_length_mm": 26.0,
-    "knife_lift_trough_extra_depth_mm": 9.0,
-    "knife_lift_trough_bottom_radius_mm": 3.0,
+    "knife_handle_lift_angle_degrees": 3.0,
     "finger_relief_diameter_mm": 24.0,
     "wall_thickness_mm": 1.0,
 }
@@ -67,9 +64,10 @@ PRINT_NOTES = (
     "spoon handles use a measured 10 mm bottom width and taper to 7 mm. Fit clearance is added "
     "outside those dimensions. The "
     "knife module stores eight knives side by side, blade-edge down, in stepped slots: the 125 mm "
-    "handle sections are shallow and 8.5 mm wide by default, while the 111 mm blade sections are "
-    "deeper and 3 mm wide. A rounded transverse trough beneath the handle centers provides room to "
-    "lift the knives. Each 6U module is split at 3U into front and back STL parts for the "
+    "handle sections are 8.5 mm wide by default, while the 111 mm blade sections are 3 mm wide. "
+    "Each slot tilts upward toward the handle end by 3 degrees by default, raising the handle butt "
+    "about 12 mm relative to the blade tip for easier pickup while preserving solid deck material "
+    "between every slot. Each 6U module is split at 3U into front and back STL parts for the "
     "configured print bed. Place each matching pair together on adjacent Gridfinity cells; the "
     "fitted cavity crosses the flush center seam. Print with the Gridfinity bases down."
 )
@@ -253,10 +251,7 @@ def build(
     knife_slot_clearance_mm: float = 0.5,
     cavity_gap_mm: float = 4.0,
     knife_rib_mm: float = 1.2,
-    knife_lift_trough_width_mm: float = 76.0,
-    knife_lift_trough_length_mm: float = 26.0,
-    knife_lift_trough_extra_depth_mm: float = 9.0,
-    knife_lift_trough_bottom_radius_mm: float = 3.0,
+    knife_handle_lift_angle_degrees: float = 3.0,
     finger_relief_diameter_mm: float = 24.0,
     wall_thickness_mm: float = 1.0,
 ):
@@ -299,10 +294,7 @@ def build(
         knife_slot_clearance_mm=knife_slot_clearance_mm,
         cavity_gap_mm=cavity_gap_mm,
         knife_rib_mm=knife_rib_mm,
-        knife_lift_trough_width_mm=knife_lift_trough_width_mm,
-        knife_lift_trough_length_mm=knife_lift_trough_length_mm,
-        knife_lift_trough_extra_depth_mm=knife_lift_trough_extra_depth_mm,
-        knife_lift_trough_bottom_radius_mm=knife_lift_trough_bottom_radius_mm,
+        knife_handle_lift_angle_degrees=knife_handle_lift_angle_degrees,
         finger_relief_diameter_mm=finger_relief_diameter_mm,
         wall_thickness_mm=wall_thickness_mm,
     )
@@ -387,10 +379,7 @@ def build(
         vertical_clearance_mm=vertical_clearance_mm,
         knife_slot_clearance_mm=knife_slot_clearance_mm,
         knife_rib_mm=knife_rib_mm,
-        knife_lift_trough_width_mm=knife_lift_trough_width_mm,
-        knife_lift_trough_length_mm=knife_lift_trough_length_mm,
-        knife_lift_trough_extra_depth_mm=knife_lift_trough_extra_depth_mm,
-        knife_lift_trough_bottom_radius_mm=knife_lift_trough_bottom_radius_mm,
+        knife_handle_lift_angle_degrees=knife_handle_lift_angle_degrees,
         wall_thickness_mm=wall_thickness_mm,
     )
 
@@ -542,10 +531,7 @@ def _build_knife_module(
     vertical_clearance_mm: float,
     knife_slot_clearance_mm: float,
     knife_rib_mm: float,
-    knife_lift_trough_width_mm: float,
-    knife_lift_trough_length_mm: float,
-    knife_lift_trough_extra_depth_mm: float,
-    knife_lift_trough_bottom_radius_mm: float,
+    knife_handle_lift_angle_degrees: float,
     wall_thickness_mm: float,
 ):
     from cqgridfinity import GR_BASE_HEIGHT, GR_FLOOR
@@ -576,24 +562,17 @@ def _build_knife_module(
 
     handle_depth = knife_handle_width_mm + vertical_clearance_mm
     blade_depth = knife_blade_width_mm + vertical_clearance_mm
-    trough_depth = handle_depth + knife_lift_trough_extra_depth_mm
     _validate_cavity_floor(
         deck_top_z=deck_top_z,
         floor_top_z=floor_top_z,
-        pocket_depth_mm=max(trough_depth, blade_depth),
+        pocket_depth_mm=blade_depth,
     )
-    if knife_lift_trough_width_mm + 2.0 * MINIMUM_DECK_RING_MM > inner_x_max - inner_x_min:
-        raise ValueError("The knife lift trough does not leave a safe deck ring.")
-    if knife_lift_trough_length_mm >= knife_handle_length_mm:
-        raise ValueError("The knife lift trough must leave handle support on both sides.")
-    if knife_lift_trough_bottom_radius_mm * 2.0 > min(
-        knife_lift_trough_width_mm, knife_lift_trough_length_mm
-    ):
-        raise ValueError("The knife lift trough bottom radius is too large.")
     first_center_x = -(knife_count - 1) * slot_pitch / 2.0
     handle_start_y = -knife_length_mm / 2.0 - knife_slot_clearance_mm
     transition_y = -knife_length_mm / 2.0 + knife_handle_length_mm
-    blade_end_y = knife_length_mm / 2.0 + knife_slot_clearance_mm
+    blade_tip_y = knife_length_mm / 2.0
+    blade_end_y = blade_tip_y + knife_slot_clearance_mm
+    blade_pivot_z = deck_top_z - blade_depth
 
     cutter = None
     for slot_index in range(knife_count):
@@ -618,19 +597,20 @@ def _build_knife_module(
             round_start=False,
             round_end=True,
         )
-        slot = handle.union(blade)
+        slot = handle.union(blade).rotate(
+            (0.0, blade_tip_y, blade_pivot_z),
+            (1.0, blade_tip_y, blade_pivot_z),
+            -knife_handle_lift_angle_degrees,
+        )
+        slot_bounds = slot.val().BoundingBox()
+        if (
+            slot_bounds.ymin < inner_y_min + MINIMUM_DECK_RING_MM
+            or slot_bounds.ymax > inner_y_max - MINIMUM_DECK_RING_MM
+        ):
+            raise ValueError(
+                "The angled knife slots do not leave a safe deck ring at the selected angle."
+            )
         cutter = slot if cutter is None else cutter.union(slot)
-
-    lift_trough = _build_rounded_trough(
-        center_x=0.0,
-        center_y=(handle_start_y + transition_y) / 2.0,
-        width_mm=knife_lift_trough_width_mm,
-        length_mm=knife_lift_trough_length_mm,
-        bottom_z=deck_top_z - trough_depth,
-        top_z=deck_top_z + BOOLEAN_OVERLAP_MM,
-        bottom_radius_mm=knife_lift_trough_bottom_radius_mm,
-    )
-    cutter = cutter.union(lift_trough)
 
     fill = _build_block(
         x_min=inner_x_min,
@@ -641,36 +621,6 @@ def _build_knife_module(
         z_max=deck_top_z,
     )
     return box.union(fill).cut(cutter).clean()
-
-
-def _build_rounded_trough(
-    *,
-    center_x: float,
-    center_y: float,
-    width_mm: float,
-    length_mm: float,
-    bottom_z: float,
-    top_z: float,
-    bottom_radius_mm: float,
-):
-    import cadquery as cq
-
-    radius = length_mm / 2.0
-    straight_width = width_mm - length_mm
-    height = top_z - bottom_z
-    trough = (
-        cq.Workplane("XY", origin=(center_x, center_y, bottom_z))
-        .rect(straight_width, length_mm)
-        .extrude(height)
-    )
-    for cap_center_x in (-straight_width / 2.0, straight_width / 2.0):
-        cap = (
-            cq.Workplane("XY", origin=(center_x + cap_center_x, center_y, bottom_z))
-            .circle(radius)
-            .extrude(height)
-        )
-        trough = trough.union(cap)
-    return trough.clean().edges("<Z").fillet(bottom_radius_mm)
 
 
 def _render_empty_module(
@@ -876,6 +826,7 @@ def _validate_parameters(**parameters) -> None:
         "fit_clearance_mm",
         "vertical_clearance_mm",
         "knife_slot_clearance_mm",
+        "knife_handle_lift_angle_degrees",
     )
     for name, value in parameters.items():
         if name in integer_names or name in nonnegative_names:
@@ -885,6 +836,8 @@ def _validate_parameters(**parameters) -> None:
     for name in nonnegative_names:
         if parameters[name] < 0:
             raise ValueError(f"{name} must not be negative.")
+    if parameters["knife_handle_lift_angle_degrees"] >= 90.0:
+        raise ValueError("knife_handle_lift_angle_degrees must be less than 90 degrees.")
 
     unit_depth = parameters["unit_depth"]
     split_depth_u = parameters["split_depth_u"]

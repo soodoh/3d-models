@@ -49,9 +49,8 @@ class SilverwareSetGeometryTests(unittest.TestCase):
         self.assertEqual(PARAMETERS["knife_length_mm"], 236.0)
         self.assertEqual(PARAMETERS["knife_handle_length_mm"], 125.0)
         self.assertEqual(PARAMETERS["knife_blade_length_mm"], 111.0)
-        self.assertEqual(PARAMETERS["knife_lift_trough_width_mm"], 76.0)
-        self.assertEqual(PARAMETERS["knife_lift_trough_length_mm"], 26.0)
-        self.assertEqual(PARAMETERS["knife_lift_trough_extra_depth_mm"], 9.0)
+        self.assertEqual(PARAMETERS["knife_handle_lift_angle_degrees"], 3.0)
+        self.assertFalse(any(name.startswith("knife_lift_trough_") for name in PARAMETERS))
 
     def test_build_returns_six_named_printable_halves(self) -> None:
         self.assertEqual(
@@ -212,7 +211,7 @@ class SilverwareSetGeometryTests(unittest.TestCase):
         self.assertTrue(cutter.isInside(cq.Vector(11.9, relief_center_y, 20.0), 1e-6))
         self.assertFalse(cutter.isInside(cq.Vector(12.1, relief_center_y, 20.0), 1e-6))
 
-    def test_knife_module_has_eight_separate_stepped_slots(self) -> None:
+    def test_knife_module_has_eight_separate_angled_stepped_slots(self) -> None:
         import cadquery as cq
 
         front = self.shapes["knife_module_front"]
@@ -221,33 +220,41 @@ class SilverwareSetGeometryTests(unittest.TestCase):
         slot_centers = tuple(-33.95 + index * slot_pitch for index in range(8))
 
         for center_x in slot_centers:
-            self.assertFalse(front.isInside(cq.Vector(center_x, -90.0, 27.5), 1e-6))
-            self.assertTrue(front.isInside(cq.Vector(center_x, -90.0, 26.5), 1e-6))
-            self.assertFalse(back.isInside(cq.Vector(center_x, 60.0, 22.5), 1e-6))
-            self.assertTrue(back.isInside(cq.Vector(center_x, 60.0, 21.5), 1e-6))
-            self.assertFalse(back.isInside(cq.Vector(center_x + 4.1, 7.0, 30.0), 1e-6))
-            self.assertTrue(back.isInside(cq.Vector(center_x + 4.4, 7.0, 30.0), 1e-6))
-            self.assertFalse(back.isInside(cq.Vector(center_x + 1.4, 7.3, 30.0), 1e-6))
-            self.assertTrue(back.isInside(cq.Vector(center_x + 1.6, 7.3, 30.0), 1e-6))
+            self.assertFalse(front.isInside(cq.Vector(center_x, -90.0, 38.5), 1e-6))
+            self.assertTrue(front.isInside(cq.Vector(center_x, -90.0, 37.5), 1e-6))
+            self.assertFalse(back.isInside(cq.Vector(center_x, 60.0, 25.5), 1e-6))
+            self.assertTrue(back.isInside(cq.Vector(center_x, 60.0, 24.75), 1e-6))
+            self.assertFalse(back.isInside(cq.Vector(center_x + 4.1, 7.0, 35.0), 1e-6))
+            self.assertTrue(back.isInside(cq.Vector(center_x + 4.4, 7.0, 35.0), 1e-6))
+            self.assertFalse(back.isInside(cq.Vector(center_x + 1.4, 8.0, 35.0), 1e-6))
+            self.assertTrue(back.isInside(cq.Vector(center_x + 1.6, 8.0, 35.0), 1e-6))
 
         rib_center_x = (slot_centers[0] + slot_centers[1]) / 2.0
         self.assertTrue(front.isInside(cq.Vector(rib_center_x, -90.0, 25.0), 1e-6))
         self.assertTrue(back.isInside(cq.Vector(slot_centers[0] + 2.0, 60.0, 20.0), 1e-6))
 
-    def test_knife_lift_trough_spans_slots_and_preserves_handle_support(self) -> None:
+    def test_knife_module_preserves_solid_deck_between_angled_slots(self) -> None:
         import cadquery as cq
 
         front = self.shapes["knife_module_front"]
-        trough_center_y = -55.75
+        former_trough_center_y = -55.75
+        slot_centers = tuple(-33.95 + index * 9.7 for index in range(8))
 
-        for x_position in (-33.95, 0.0, 33.95):
-            with self.subTest(x_position=x_position):
-                self.assertFalse(front.isInside(cq.Vector(x_position, trough_center_y, 18.5), 1e-6))
-                self.assertTrue(front.isInside(cq.Vector(x_position, trough_center_y, 17.5), 1e-6))
-        self.assertFalse(front.isInside(cq.Vector(37.9, trough_center_y, 25.0), 1e-6))
-        self.assertTrue(front.isInside(cq.Vector(38.1, trough_center_y, 25.0), 1e-6))
-        self.assertTrue(front.isInside(cq.Vector(0.0, -90.0, 25.0), 1e-6))
-        self.assertTrue(front.isInside(cq.Vector(0.0, -30.0, 25.0), 1e-6))
+        for center_x in slot_centers:
+            with self.subTest(center_x=center_x):
+                self.assertFalse(
+                    front.isInside(cq.Vector(center_x, former_trough_center_y, 37.0), 1e-6)
+                )
+                self.assertTrue(
+                    front.isInside(cq.Vector(center_x, former_trough_center_y, 35.0), 1e-6)
+                )
+
+        rib_centers = tuple(
+            (left_center + right_center) / 2.0
+            for left_center, right_center in zip(slot_centers[:-1], slot_centers[1:], strict=True)
+        )
+        for center_x in rib_centers:
+            self.assertTrue(front.isInside(cq.Vector(center_x, former_trough_center_y, 37.0), 1e-6))
 
     def test_every_export_part_is_one_valid_shell(self) -> None:
         for name, part in self.parts.items():
@@ -258,6 +265,12 @@ class SilverwareSetGeometryTests(unittest.TestCase):
     def test_rejects_inconsistent_knife_section_lengths(self) -> None:
         with self.assertRaisesRegex(ValueError, "must add up"):
             build(knife_blade_length_mm=110.0)
+
+    def test_rejects_invalid_knife_handle_lift_angles(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must not be negative"):
+            build(knife_handle_lift_angle_degrees=-0.1)
+        with self.assertRaisesRegex(ValueError, "must be less than 90"):
+            build(knife_handle_lift_angle_degrees=90.0)
 
     def test_rejects_fork_handle_that_does_not_taper(self) -> None:
         with self.assertRaisesRegex(ValueError, "must exceed"):
