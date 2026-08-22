@@ -26,7 +26,14 @@ class SilverwareSetGeometryTests(unittest.TestCase):
         self.assertIn("gridfinity_silverware_set", models)
         self.assertEqual(PARAMETERS["unit_height"], 6)
         self.assertEqual(PARAMETERS["spoon_unit_width"], 2)
-        self.assertEqual(PARAMETERS["finger_relief_diameter_mm"], 24.0)
+        self.assertEqual(PARAMETERS["utensil_handle_extension_mm"], 4.0)
+        self.assertNotIn("utensil_grab_bay_width_mm", PARAMETERS)
+        self.assertEqual(PARAMETERS["utensil_grab_bay_length_mm"], 40.0)
+        self.assertEqual(PARAMETERS["utensil_grab_bay_center_y_mm"], -42.0)
+        self.assertEqual(PARAMETERS["utensil_lead_in_mm"], 2.0)
+        self.assertEqual(PARAMETERS["utensil_lead_in_depth_mm"], 8.0)
+        self.assertEqual(PARAMETERS["utensil_handle_lift_mm"], 4.0)
+        self.assertNotIn("finger_relief_diameter_mm", PARAMETERS)
         self.assertEqual(PARAMETERS["large_fork_width_mm"], 25.0)
         self.assertEqual(PARAMETERS["large_fork_length_mm"], 208.0)
         self.assertEqual(PARAMETERS["large_fork_stack_height_mm"], 24.0)
@@ -80,15 +87,15 @@ class SilverwareSetGeometryTests(unittest.TestCase):
                 self.assertAlmostEqual(bounds.ylen, 125.75, places=3)
                 self.assertAlmostEqual(bounds.zlen, 45.8, places=3)
 
-    def test_fork_pockets_use_maximum_depth_with_two_millimeter_floors(self) -> None:
+    def test_fork_heads_keep_maximum_depth_with_two_millimeter_floors(self) -> None:
         import cadquery as cq
 
-        front = self.shapes["fork_module_front"]
+        back = self.shapes["fork_module_back"]
         for center_x in (-15.5, 14.5):
             with self.subTest(center_x=center_x):
-                self.assertFalse(front.isInside(cq.Vector(center_x, -70.0, 9.5), 1e-6))
-                self.assertTrue(front.isInside(cq.Vector(center_x, -70.0, 8.5), 1e-6))
-        self.assertTrue(front.isInside(cq.Vector(0.0, -70.0, 37.0), 1e-6))
+                self.assertFalse(back.isInside(cq.Vector(center_x, 70.0, 9.5), 1e-6))
+                self.assertTrue(back.isInside(cq.Vector(center_x, 70.0, 8.5), 1e-6))
+        self.assertTrue(back.isInside(cq.Vector(0.0, 70.0, 37.0), 1e-6))
 
     def test_fork_cutters_use_measured_widths_plus_clearance(self) -> None:
         import cadquery as cq
@@ -113,7 +120,6 @@ class SilverwareSetGeometryTests(unittest.TestCase):
                     length_mm=fork_length_mm,
                     width_profile=width_profile,
                     fit_clearance_mm=1.0,
-                    finger_relief_diameter_mm=24.0,
                 ).val()
                 handle_bottom_y = -fork_length_mm / 2.0
                 measured_sections = (
@@ -138,18 +144,16 @@ class SilverwareSetGeometryTests(unittest.TestCase):
                         )
                     )
 
-    def test_spoon_pockets_are_staggered_at_maximum_depth(self) -> None:
+    def test_spoon_heads_are_staggered_at_maximum_depth(self) -> None:
         import cadquery as cq
 
-        front = self.shapes["spoon_module_front"]
         back = self.shapes["spoon_module_back"]
-        small_spoon_center = (-18.0, -20.0)
-        large_spoon_center = (17.0, 20.0)
+        head_locations = ((-18.0, 50.0), (17.0, 90.0))
 
-        self.assertFalse(front.isInside(cq.Vector(small_spoon_center[0], -70.0, 9.5), 1e-6))
-        self.assertTrue(front.isInside(cq.Vector(small_spoon_center[0], -70.0, 8.5), 1e-6))
-        self.assertFalse(back.isInside(cq.Vector(large_spoon_center[0], 70.0, 9.5), 1e-6))
-        self.assertTrue(back.isInside(cq.Vector(large_spoon_center[0], 70.0, 8.5), 1e-6))
+        for center_x, head_y in head_locations:
+            with self.subTest(center_x=center_x, head_y=head_y):
+                self.assertFalse(back.isInside(cq.Vector(center_x, head_y, 9.5), 1e-6))
+                self.assertTrue(back.isInside(cq.Vector(center_x, head_y, 8.5), 1e-6))
         self.assertTrue(back.isInside(cq.Vector(0.0, 60.0, 37.0), 1e-6))
 
     def test_spoon_cutters_use_measured_handle_widths_plus_clearance(self) -> None:
@@ -171,7 +175,6 @@ class SilverwareSetGeometryTests(unittest.TestCase):
                     length_mm=spoon_length_mm,
                     width_profile=width_profile,
                     fit_clearance_mm=1.0,
-                    finger_relief_diameter_mm=24.0,
                 ).val()
                 handle_bottom_y = -spoon_length_mm / 2.0
                 handle_narrow_y = handle_bottom_y + spoon_length_mm * 0.65
@@ -183,12 +186,12 @@ class SilverwareSetGeometryTests(unittest.TestCase):
                     self.assertTrue(cutter.isInside(cq.Vector(4.4, handle_y, 20.0), 1e-6))
                 self.assertFalse(cutter.isInside(cq.Vector(4.6, handle_narrow_y, 20.0), 1e-6))
                 bowl_end_y = spoon_length_mm / 2.0
-                self.assertTrue(cutter.isInside(cq.Vector(0.9, bowl_end_y, 20.0), 1e-6))
-                self.assertFalse(cutter.isInside(cq.Vector(1.1, bowl_end_y, 20.0), 1e-6))
-                self.assertTrue(cutter.isInside(cq.Vector(0.5, bowl_end_y + 0.8, 20.0), 1e-6))
-                self.assertFalse(cutter.isInside(cq.Vector(0.7, bowl_end_y + 0.8, 20.0), 1e-6))
+                self.assertTrue(cutter.isInside(cq.Vector(5.0, bowl_end_y, 20.0), 1e-6))
+                self.assertFalse(cutter.isInside(cq.Vector(6.0, bowl_end_y, 20.0), 1e-6))
+                self.assertTrue(cutter.isInside(cq.Vector(2.0, bowl_end_y + 0.8, 20.0), 1e-6))
+                self.assertFalse(cutter.isInside(cq.Vector(3.0, bowl_end_y + 0.8, 20.0), 1e-6))
 
-    def test_utensil_finger_reliefs_use_twenty_four_millimeter_diameter(self) -> None:
+    def test_utensil_cutters_add_requested_access_features(self) -> None:
         import cadquery as cq
 
         cutter = _build_utensil_cutter(
@@ -204,12 +207,41 @@ class SilverwareSetGeometryTests(unittest.TestCase):
                 narrow_handle_width_mm=7.0,
             ),
             fit_clearance_mm=1.0,
-            finger_relief_diameter_mm=24.0,
         ).val()
-        relief_center_y = -90.0 + 28.0
 
-        self.assertTrue(cutter.isInside(cq.Vector(11.9, relief_center_y, 20.0), 1e-6))
-        self.assertFalse(cutter.isInside(cq.Vector(12.1, relief_center_y, 20.0), 1e-6))
+        self.assertTrue(cutter.isInside(cq.Vector(0.0, -94.9, 20.0), 1e-6))
+        self.assertFalse(cutter.isInside(cq.Vector(0.0, -95.1, 20.0), 1e-6))
+        self.assertFalse(cutter.isInside(cq.Vector(0.0, -90.0, 13.9), 1e-6))
+        self.assertTrue(cutter.isInside(cq.Vector(0.0, -90.0, 14.1), 1e-6))
+        self.assertFalse(cutter.isInside(cq.Vector(0.0, 70.0, 9.9), 1e-6))
+        self.assertTrue(cutter.isInside(cq.Vector(0.0, 70.0, 10.1), 1e-6))
+
+        self.assertFalse(cutter.isInside(cq.Vector(17.9, -18.0, 20.0), 1e-6))
+
+        self.assertFalse(cutter.isInside(cq.Vector(6.0, 18.0, 33.9), 1e-6))
+        self.assertTrue(cutter.isInside(cq.Vector(6.0, 18.0, 40.0), 1e-6))
+
+    def test_modules_use_one_wall_to_wall_stadium_grab_bay(self) -> None:
+        import cadquery as cq
+
+        for module_name in ("fork_module_front", "spoon_module_front"):
+            module = self.shapes[module_name]
+            with self.subTest(module_name=module_name):
+                for x_position in (-40.7, 0.0, 40.7):
+                    self.assertFalse(module.isInside(cq.Vector(x_position, -42.0, 20.0), 1e-6))
+                self.assertTrue(module.isInside(cq.Vector(-40.8, -42.0, 20.0), 1e-6))
+                self.assertTrue(module.isInside(cq.Vector(40.8, -42.0, 20.0), 1e-6))
+
+                self.assertFalse(module.isInside(cq.Vector(0.0, -61.9, 20.0), 1e-6))
+                self.assertFalse(module.isInside(cq.Vector(20.0, -61.9, 20.0), 1e-6))
+                self.assertTrue(module.isInside(cq.Vector(25.0, -61.9, 20.0), 1e-6))
+                self.assertFalse(module.isInside(cq.Vector(38.0, -50.0, 20.0), 1e-6))
+                self.assertTrue(module.isInside(cq.Vector(40.0, -52.0, 20.0), 1e-6))
+
+                self.assertTrue(module.isInside(cq.Vector(0.0, -63.0, 20.0), 1e-6))
+                self.assertTrue(module.isInside(cq.Vector(0.0, -21.0, 20.0), 1e-6))
+                self.assertTrue(module.isInside(cq.Vector(0.0, -42.0, 12.9), 1e-6))
+                self.assertFalse(module.isInside(cq.Vector(0.0, -42.0, 13.1), 1e-6))
 
     def test_knife_module_has_eight_separate_angled_stepped_slots(self) -> None:
         import cadquery as cq

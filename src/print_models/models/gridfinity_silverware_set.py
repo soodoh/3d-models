@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from math import cos, pi, sin
 
 from print_models.models.gridfinity_box import (
     FractionalDividerGridfinityBox,
@@ -53,23 +54,34 @@ PARAMETERS = {
     "cavity_gap_mm": 4.0,
     "knife_rib_mm": 1.2,
     "knife_handle_lift_angle_degrees": 3.0,
-    "finger_relief_diameter_mm": 24.0,
+    "utensil_handle_extension_mm": 4.0,
+    "utensil_grab_bay_length_mm": 40.0,
+    "utensil_grab_bay_center_y_mm": -42.0,
+    "utensil_lead_in_mm": 2.0,
+    "utensil_lead_in_depth_mm": 8.0,
+    "utensil_handle_lift_mm": 4.0,
     "wall_thickness_mm": 1.0,
 }
 PRINT_NOTES = (
-    "The fork and spoon modules store each group of eight in one full-depth, photo-scaled "
-    "silhouette pocket that leaves a 2 mm floor and includes a 24 mm finger relief. The 2U spoon "
-    "module keeps both spoons facing the same direction and staggers their cavities laterally and "
-    "lengthwise. Fork handles use their measured 10 mm and 9 mm bottom widths and taper to 7 mm; "
-    "spoon handles use a measured 10 mm bottom width and taper to 7 mm. Fit clearance is added "
-    "outside those dimensions. The "
-    "knife module stores eight knives side by side, blade-edge down, in stepped slots: the 125 mm "
-    "handle sections are 8.5 mm wide by default, while the 111 mm blade sections are 3 mm wide. "
-    "Each slot tilts upward toward the handle end by 3 degrees by default, raising the handle butt "
-    "about 12 mm relative to the blade tip for easier pickup while preserving solid deck material "
-    "between every slot. Each 6U module is split at 3U into front and back STL parts for the "
-    "configured print bed. Place each matching pair together on adjacent Gridfinity cells; the "
-    "fitted cavity crosses the flush center seam. Print with the Gridfinity bases down."
+    "The fork and spoon modules store each group of eight in one maximum-depth, photo-scaled "
+    "silhouette pocket that leaves a 2 mm floor. Each handle pocket extends 4 mm beyond the "
+    "measured utensil and rises 4 mm toward the handle butt. One aligned, wall-to-wall grab bay "
+    "with a straight rectangular middle and rounded ends spans both utensil handles in the lower "
+    "half of each module. A 2 mm tapered lead-in over the upper 8 mm guides utensils into the "
+    "fitted lower profile. The 2U spoon module keeps both spoons facing the same direction and "
+    "staggers their cavities laterally and lengthwise. Fork handles use their measured 10 mm and "
+    "9 mm bottom widths and taper to 7 mm; spoon handles use a measured 10 mm bottom width and "
+    "taper to 7 mm. Fit clearance is added outside those dimensions. The knife module stores "
+    "cavities laterally and lengthwise. Fork handles use their measured 10 mm and 9 mm bottom "
+    "widths and taper to 7 mm; spoon handles use a measured 10 mm bottom width and taper to 7 mm. "
+    "Fit clearance is added outside those dimensions. The knife module stores eight knives side "
+    "by side, blade-edge down, in stepped slots: the 125 mm handle sections are 8.5 mm wide by "
+    "default, while the 111 mm blade sections are 3 mm wide. Each slot tilts upward toward the "
+    "handle end by 3 degrees by default, raising the handle butt about 12 mm relative to the blade "
+    "tip for easier pickup while preserving solid deck material between every slot. Each 6U "
+    "module is split at 3U into front and back STL parts for the configured print bed. Place each "
+    "matching pair together on adjacent Gridfinity cells; the fitted cavity crosses the flush "
+    "center seam. Print with the Gridfinity bases down."
 )
 
 GRIDFINITY_HEIGHT_UNIT_MM = 7.0
@@ -77,6 +89,8 @@ MINIMUM_CAVITY_FLOOR_MM = 2.0
 MINIMUM_DECK_RING_MM = 2.0
 BOOLEAN_OVERLAP_MM = 0.2
 SPOON_CAVITY_OFFSETS_MM = ((-18.0, -20.0), (17.0, 20.0))
+SPOON_CAP_START_FRACTION = 0.90
+SPOON_CAP_ARC_INTERVALS = 8
 
 # Eating-end width ratios traced from the official overhead product image. Physical handle
 # measurements supplied by the owner set the handle portion of each final profile.
@@ -252,7 +266,12 @@ def build(
     cavity_gap_mm: float = 4.0,
     knife_rib_mm: float = 1.2,
     knife_handle_lift_angle_degrees: float = 3.0,
-    finger_relief_diameter_mm: float = 24.0,
+    utensil_handle_extension_mm: float = 4.0,
+    utensil_grab_bay_length_mm: float = 40.0,
+    utensil_grab_bay_center_y_mm: float = -42.0,
+    utensil_lead_in_mm: float = 2.0,
+    utensil_lead_in_depth_mm: float = 8.0,
+    utensil_handle_lift_mm: float = 4.0,
     wall_thickness_mm: float = 1.0,
 ):
     """Build three fitted modules and return their six print-bed-safe halves."""
@@ -295,7 +314,12 @@ def build(
         cavity_gap_mm=cavity_gap_mm,
         knife_rib_mm=knife_rib_mm,
         knife_handle_lift_angle_degrees=knife_handle_lift_angle_degrees,
-        finger_relief_diameter_mm=finger_relief_diameter_mm,
+        utensil_handle_extension_mm=utensil_handle_extension_mm,
+        utensil_grab_bay_length_mm=utensil_grab_bay_length_mm,
+        utensil_grab_bay_center_y_mm=utensil_grab_bay_center_y_mm,
+        utensil_lead_in_mm=utensil_lead_in_mm,
+        utensil_lead_in_depth_mm=utensil_lead_in_depth_mm,
+        utensil_handle_lift_mm=utensil_handle_lift_mm,
         wall_thickness_mm=wall_thickness_mm,
     )
 
@@ -328,7 +352,12 @@ def build(
         fit_clearance_mm=fit_clearance_mm,
         vertical_clearance_mm=vertical_clearance_mm,
         cavity_gap_mm=cavity_gap_mm,
-        finger_relief_diameter_mm=finger_relief_diameter_mm,
+        handle_extension_mm=utensil_handle_extension_mm,
+        grab_bay_length_mm=utensil_grab_bay_length_mm,
+        grab_bay_center_y_mm=utensil_grab_bay_center_y_mm,
+        lead_in_mm=utensil_lead_in_mm,
+        lead_in_depth_mm=utensil_lead_in_depth_mm,
+        handle_lift_mm=utensil_handle_lift_mm,
         wall_thickness_mm=wall_thickness_mm,
     )
     spoon_module = _build_stacked_utensil_module(
@@ -360,7 +389,12 @@ def build(
         fit_clearance_mm=fit_clearance_mm,
         vertical_clearance_mm=vertical_clearance_mm,
         cavity_gap_mm=cavity_gap_mm,
-        finger_relief_diameter_mm=finger_relief_diameter_mm,
+        handle_extension_mm=utensil_handle_extension_mm,
+        grab_bay_length_mm=utensil_grab_bay_length_mm,
+        grab_bay_center_y_mm=utensil_grab_bay_center_y_mm,
+        lead_in_mm=utensil_lead_in_mm,
+        lead_in_depth_mm=utensil_lead_in_depth_mm,
+        handle_lift_mm=utensil_handle_lift_mm,
         cavity_offsets_mm=SPOON_CAVITY_OFFSETS_MM,
         wall_thickness_mm=wall_thickness_mm,
     )
@@ -429,7 +463,12 @@ def _build_stacked_utensil_module(
     fit_clearance_mm: float,
     vertical_clearance_mm: float,
     cavity_gap_mm: float,
-    finger_relief_diameter_mm: float,
+    handle_extension_mm: float,
+    grab_bay_length_mm: float,
+    grab_bay_center_y_mm: float,
+    lead_in_mm: float,
+    lead_in_depth_mm: float,
+    handle_lift_mm: float,
     wall_thickness_mm: float,
     cavity_offsets_mm: Sequence[tuple[float, float]] | None = None,
 ):
@@ -465,44 +504,91 @@ def _build_stacked_utensil_module(
         cavity_centers = tuple(cavity_offsets_mm)
 
     pocket_depth_mm = deck_top_z - floor_top_z - MINIMUM_CAVITY_FLOOR_MM
+    pocket_bottom_z = deck_top_z - pocket_depth_mm
     cavities = []
+    fitted_cavities = []
     for (center_x, center_y), (width_mm, length_mm, stack_height_mm, width_profile) in zip(
         cavity_centers, utensil_specs, strict=True
     ):
         _validate_cavity_floor(
             deck_top_z=deck_top_z,
             floor_top_z=floor_top_z,
-            pocket_depth_mm=stack_height_mm + vertical_clearance_mm,
+            pocket_depth_mm=stack_height_mm + vertical_clearance_mm + handle_lift_mm,
+        )
+        fitted_cavity = _build_utensil_profile_cutter(
+            center_x=center_x,
+            center_y=center_y,
+            bottom_z=pocket_bottom_z,
+            top_z=deck_top_z + BOOLEAN_OVERLAP_MM,
+            width_mm=width_mm,
+            length_mm=length_mm,
+            width_profile=width_profile,
+            clearance_mm=fit_clearance_mm,
+            handle_extension_mm=handle_extension_mm,
         )
         cavity = _build_utensil_cutter(
             center_x=center_x,
             center_y=center_y,
-            bottom_z=deck_top_z - pocket_depth_mm,
+            bottom_z=pocket_bottom_z,
             top_z=deck_top_z + BOOLEAN_OVERLAP_MM,
             width_mm=width_mm,
             length_mm=length_mm,
             width_profile=width_profile,
             fit_clearance_mm=fit_clearance_mm,
-            finger_relief_diameter_mm=finger_relief_diameter_mm,
+            handle_extension_mm=handle_extension_mm,
+            lead_in_mm=lead_in_mm,
+            lead_in_depth_mm=lead_in_depth_mm,
+            handle_lift_mm=handle_lift_mm,
         )
-        cavity_bounds = cavity.val().BoundingBox()
+        fitted_bounds = fitted_cavity.val().BoundingBox()
         if (
-            cavity_bounds.xmin < inner_x_min + MINIMUM_DECK_RING_MM
-            or cavity_bounds.xmax > inner_x_max - MINIMUM_DECK_RING_MM
-            or cavity_bounds.ymin < inner_y_min + MINIMUM_DECK_RING_MM
-            or cavity_bounds.ymax > inner_y_max - MINIMUM_DECK_RING_MM
+            fitted_bounds.xmin < inner_x_min + MINIMUM_DECK_RING_MM
+            or fitted_bounds.xmax > inner_x_max - MINIMUM_DECK_RING_MM
+            or fitted_bounds.ymin < inner_y_min + MINIMUM_DECK_RING_MM
+            or fitted_bounds.ymax > inner_y_max - MINIMUM_DECK_RING_MM
         ):
             raise ValueError("A utensil cavity does not leave the required surrounding deck ring.")
-        if any(
-            cavity.val().distance(existing_cavity.val()) < cavity_gap_mm
-            for existing_cavity in cavities
+        lead_in_bounds = cavity.val().BoundingBox()
+        if (
+            lead_in_bounds.xmin < inner_x_min
+            or lead_in_bounds.xmax > inner_x_max
+            or lead_in_bounds.ymin < inner_y_min
+            or lead_in_bounds.ymax > inner_y_max
         ):
-            raise ValueError("The utensil cavities do not leave the required gap.")
+            raise ValueError("A utensil lead-in intersects the module wall.")
+        if any(
+            fitted_cavity.val().distance(existing_cavity.val()) < cavity_gap_mm
+            for existing_cavity in fitted_cavities
+        ):
+            raise ValueError("The fitted utensil cavities do not leave the required gap.")
+        fitted_cavities.append(fitted_cavity)
         cavities.append(cavity)
+
+    grab_bay = _build_unified_grab_bay_cutter(
+        center_y=grab_bay_center_y_mm,
+        bottom_z=pocket_bottom_z,
+        top_z=deck_top_z + BOOLEAN_OVERLAP_MM,
+        width_mm=inner_x_max - inner_x_min,
+        length_mm=grab_bay_length_mm,
+        lead_in_mm=lead_in_mm,
+        lead_in_depth_mm=lead_in_depth_mm,
+        handle_lift_mm=handle_lift_mm,
+    )
+    grab_bay_bounds = grab_bay.val().BoundingBox()
+    if (
+        grab_bay_bounds.xmin < inner_x_min - 1e-6
+        or grab_bay_bounds.xmax > inner_x_max + 1e-6
+        or grab_bay_bounds.ymin < inner_y_min
+        or grab_bay_bounds.ymax > 0.0
+    ):
+        raise ValueError("The unified utensil grab bay must remain inside the lower module half.")
+    if any(grab_bay.val().distance(cavity.val()) > 1e-6 for cavity in fitted_cavities):
+        raise ValueError("The unified utensil grab bay must intersect every utensil handle pocket.")
 
     cutter = cavities[0]
     for cavity in cavities[1:]:
         cutter = cutter.union(cavity)
+    cutter = cutter.union(grab_bay)
 
     fill = _build_block(
         x_min=inner_x_min,
@@ -639,6 +725,95 @@ def _render_empty_module(
     ).render()
 
 
+def _utensil_outline_points(
+    *,
+    width_mm: float,
+    length_mm: float,
+    width_profile: tuple[tuple[float, float], ...],
+    clearance_mm: float,
+    handle_extension_mm: float,
+) -> tuple[tuple[float, float], ...]:
+    half_width = width_mm / 2.0
+    object_start_y = -length_mm / 2.0
+    object_end_y = length_mm / 2.0
+    extended_start_y = object_start_y - handle_extension_mm
+    cleared_start_y = extended_start_y - clearance_mm
+    cleared_end_y = object_end_y + clearance_mm
+    profile_closes_at_end = width_profile[-1][1] == 0.0
+    sampled_profile = _monotonic_profile_samples(width_profile)
+    if profile_closes_at_end:
+        cap_width_ratio = min(
+            width_profile,
+            key=lambda point: abs(point[0] - SPOON_CAP_START_FRACTION),
+        )[1]
+        base_cap_radius = half_width * cap_width_ratio
+        cap_center_fraction = 1.0 - base_cap_radius / length_mm
+        sampled_profile = tuple(
+            point for point in sampled_profile if point[0] <= cap_center_fraction
+        )
+    first_half_width = half_width * sampled_profile[0][1] + clearance_mm
+    right_points = [
+        (first_half_width, extended_start_y),
+        *(
+            (
+                half_width * width_ratio + clearance_mm,
+                object_start_y + length_mm * length_fraction,
+            )
+            for length_fraction, width_ratio in sampled_profile
+        ),
+    ]
+    if profile_closes_at_end:
+        cap_center_y = object_end_y - base_cap_radius
+        cap_radius = base_cap_radius + clearance_mm
+        right_points[-1] = (cap_radius, cap_center_y)
+        right_points.extend(
+            (
+                cap_radius * cos(pi * arc_index / (2.0 * SPOON_CAP_ARC_INTERVALS)),
+                cap_center_y + cap_radius * sin(pi * arc_index / (2.0 * SPOON_CAP_ARC_INTERVALS)),
+            )
+            for arc_index in range(1, SPOON_CAP_ARC_INTERVALS)
+        )
+    else:
+        right_points[-1] = (right_points[-1][0], cleared_end_y)
+    left_points = [(-x, y) for x, y in reversed(right_points)]
+    return (
+        (0.0, cleared_start_y),
+        *right_points,
+        (0.0, cleared_end_y),
+        *left_points,
+    )
+
+
+def _build_utensil_profile_cutter(
+    *,
+    center_x: float,
+    center_y: float,
+    bottom_z: float,
+    top_z: float,
+    width_mm: float,
+    length_mm: float,
+    width_profile: tuple[tuple[float, float], ...],
+    clearance_mm: float,
+    handle_extension_mm: float,
+):
+    import cadquery as cq
+
+    outline_points = _utensil_outline_points(
+        width_mm=width_mm,
+        length_mm=length_mm,
+        width_profile=width_profile,
+        clearance_mm=clearance_mm,
+        handle_extension_mm=handle_extension_mm,
+    )
+    profile = (
+        cq.Workplane("XY", origin=(center_x, center_y, bottom_z))
+        .polyline(outline_points)
+        .close()
+        .extrude(top_z - bottom_z)
+    )
+    return profile.clean()
+
+
 def _build_utensil_cutter(
     *,
     center_x: float,
@@ -649,52 +824,148 @@ def _build_utensil_cutter(
     length_mm: float,
     width_profile: tuple[tuple[float, float], ...],
     fit_clearance_mm: float,
-    finger_relief_diameter_mm: float,
+    handle_extension_mm: float = 4.0,
+    lead_in_mm: float = 2.0,
+    lead_in_depth_mm: float = 8.0,
+    handle_lift_mm: float = 4.0,
 ):
     import cadquery as cq
 
-    half_width = width_mm / 2.0
+    profile = _build_utensil_profile_cutter(
+        center_x=center_x,
+        center_y=center_y,
+        bottom_z=bottom_z,
+        top_z=top_z,
+        width_mm=width_mm,
+        length_mm=length_mm,
+        width_profile=width_profile,
+        clearance_mm=fit_clearance_mm,
+        handle_extension_mm=handle_extension_mm,
+    )
     object_start_y = -length_mm / 2.0
-    object_end_y = length_mm / 2.0
-    cleared_start_y = object_start_y - fit_clearance_mm
-    cleared_end_y = object_end_y + fit_clearance_mm
-    right_points = [
-        (
-            half_width * width_ratio + fit_clearance_mm,
-            object_start_y + length_mm * length_fraction,
-        )
-        for length_fraction, width_ratio in _monotonic_profile_samples(width_profile)
-    ]
-    profile_closes_at_end = width_profile[-1][1] == 0.0
-    if not profile_closes_at_end:
-        right_points[-1] = (right_points[-1][0], cleared_end_y)
-    left_points = [(-x, y) for x, y in reversed(right_points)]
-    outline_points = [
-        (0.0, cleared_start_y),
-        *right_points,
-        (0.0, cleared_end_y),
-        *left_points,
-    ]
-    profile = (
-        cq.Workplane("XY", origin=(center_x, center_y, bottom_z))
-        .polyline(outline_points)
+    lead_start_z = top_z - BOOLEAN_OVERLAP_MM - lead_in_depth_mm
+    lower_outline = _utensil_outline_points(
+        width_mm=width_mm,
+        length_mm=length_mm,
+        width_profile=width_profile,
+        clearance_mm=fit_clearance_mm,
+        handle_extension_mm=handle_extension_mm,
+    )
+    upper_outline = _utensil_outline_points(
+        width_mm=width_mm,
+        length_mm=length_mm,
+        width_profile=width_profile,
+        clearance_mm=fit_clearance_mm + lead_in_mm,
+        handle_extension_mm=handle_extension_mm,
+    )
+    profile_lead_in = (
+        cq.Workplane("XY", origin=(center_x, center_y, lead_start_z))
+        .polyline(lower_outline)
         .close()
-        .extrude(top_z - bottom_z)
+        .workplane(offset=top_z - lead_start_z)
+        .polyline(upper_outline)
+        .close()
+        .loft(combine=True)
     )
-    if profile_closes_at_end and fit_clearance_mm > 0.0:
-        end_clearance = (
-            cq.Workplane("XY", origin=(center_x, center_y + object_end_y, bottom_z))
-            .circle(fit_clearance_mm)
-            .extrude(top_z - bottom_z)
+    cutter = profile.union(profile_lead_in)
+
+    handle_lift_end_y = object_start_y + 0.65 * length_mm
+    wedge_half_width = width_mm / 2.0 + fit_clearance_mm + lead_in_mm + BOOLEAN_OVERLAP_MM
+    lift_wedge = (
+        cq.Workplane("YZ", origin=(center_x, center_y, 0.0))
+        .polyline(
+            (
+                (
+                    object_start_y - handle_extension_mm - fit_clearance_mm - lead_in_mm,
+                    bottom_z - BOOLEAN_OVERLAP_MM,
+                ),
+                (
+                    object_start_y - handle_extension_mm - fit_clearance_mm - lead_in_mm,
+                    bottom_z + handle_lift_mm,
+                ),
+                (
+                    object_start_y,
+                    bottom_z + handle_lift_mm,
+                ),
+                (handle_lift_end_y, bottom_z - BOOLEAN_OVERLAP_MM),
+            )
         )
-        profile = profile.union(end_clearance)
-    relief_center_y = object_start_y + min(28.0, length_mm * 0.16)
-    relief = (
-        cq.Workplane("XY", origin=(center_x, center_y + relief_center_y, bottom_z))
-        .circle(finger_relief_diameter_mm / 2.0)
-        .extrude(top_z - bottom_z)
+        .close()
+        .extrude(wedge_half_width, both=True)
     )
-    return profile.union(relief).clean()
+    return cutter.cut(lift_wedge).clean()
+
+
+def _build_unified_grab_bay_cutter(
+    *,
+    center_y: float,
+    bottom_z: float,
+    top_z: float,
+    width_mm: float,
+    length_mm: float,
+    lead_in_mm: float,
+    lead_in_depth_mm: float,
+    handle_lift_mm: float,
+):
+    import cadquery as cq
+
+    lower_radius = length_mm / 2.0
+    upper_radius = lower_radius + lead_in_mm
+    lower_straight_width = width_mm - 2.0 * lower_radius
+    upper_straight_width = width_mm - 2.0 * upper_radius
+    if upper_straight_width <= 0.0:
+        raise ValueError("The grab bay is too narrow for its rounded ends and lead-in.")
+
+    bay_bottom_z = bottom_z + handle_lift_mm
+    bay_height = top_z - bay_bottom_z
+    lower_left_center_x = -lower_straight_width / 2.0
+    lower_right_center_x = lower_straight_width / 2.0
+    grab_bay = (
+        cq.Workplane("XY", origin=(0.0, center_y, bay_bottom_z))
+        .rect(lower_straight_width, length_mm)
+        .extrude(bay_height)
+        .union(
+            cq.Workplane("XY", origin=(lower_left_center_x, center_y, bay_bottom_z))
+            .circle(lower_radius)
+            .extrude(bay_height)
+        )
+        .union(
+            cq.Workplane("XY", origin=(lower_right_center_x, center_y, bay_bottom_z))
+            .circle(lower_radius)
+            .extrude(bay_height)
+        )
+    )
+
+    lead_start_z = top_z - BOOLEAN_OVERLAP_MM - lead_in_depth_mm
+    lead_height = top_z - lead_start_z
+    upper_left_center_x = -upper_straight_width / 2.0
+    upper_right_center_x = upper_straight_width / 2.0
+    rectangle_lead_in = (
+        cq.Workplane("XY", origin=(0.0, center_y, lead_start_z))
+        .rect(lower_straight_width, length_mm)
+        .workplane(offset=lead_height)
+        .rect(upper_straight_width, length_mm + 2.0 * lead_in_mm)
+        .loft(combine=True)
+    )
+    left_end_lead_in = (
+        cq.Workplane("XY", origin=(lower_left_center_x, center_y, lead_start_z))
+        .circle(lower_radius)
+        .workplane(offset=lead_height)
+        .center(upper_left_center_x - lower_left_center_x, 0.0)
+        .circle(upper_radius)
+        .loft(combine=True)
+    )
+    right_end_lead_in = (
+        cq.Workplane("XY", origin=(lower_right_center_x, center_y, lead_start_z))
+        .circle(lower_radius)
+        .workplane(offset=lead_height)
+        .center(upper_right_center_x - lower_right_center_x, 0.0)
+        .circle(upper_radius)
+        .loft(combine=True)
+    )
+    return (
+        grab_bay.union(rectangle_lead_in).union(left_end_lead_in).union(right_end_lead_in).clean()
+    )
 
 
 def _build_rounded_section_along_y(
@@ -829,7 +1100,11 @@ def _validate_parameters(**parameters) -> None:
         "knife_handle_lift_angle_degrees",
     )
     for name, value in parameters.items():
-        if name in integer_names or name in nonnegative_names:
+        if (
+            name in integer_names
+            or name in nonnegative_names
+            or name == "utensil_grab_bay_center_y_mm"
+        ):
             continue
         if value <= 0:
             raise ValueError(f"{name} must be greater than zero.")
