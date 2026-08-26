@@ -1,4 +1,4 @@
-"""Split Gridfinity cutout modules for a Cambridge Beacon place setting for eight."""
+"""Split Gridfinity cutout modules for a Cambridge Beacon place setting and steak knives."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from print_models.models.gridfinity_box import (
 NAME = "gridfinity_silverware_set"
 DESCRIPTION = (
     "Split fitted Gridfinity modules for eight Cambridge Beacon salad forks, dinner forks, "
-    "teaspoons, dinner spoons, and individually slotted edge-down dinner knives."
+    "teaspoons, dinner spoons, dinner knives, and full-profile steak knives."
 )
 PARAMETERS = {
     "unit_depth": 6,
@@ -21,6 +21,7 @@ PARAMETERS = {
     "fork_unit_width": 2,
     "spoon_unit_width": 2,
     "knife_unit_width": 2,
+    "steak_knife_unit_width": 4,
     "split_depth_u": 3.0,
     "large_fork_width_mm": 25.0,
     "large_fork_length_mm": 208.0,
@@ -48,6 +49,26 @@ PARAMETERS = {
     "knife_blade_thickness_mm": 2.0,
     "knife_handle_width_mm": 14.0,
     "knife_handle_thickness_mm": 7.5,
+    "steak_knife_count": 8,
+    "steak_knife_length_mm": 222.0,
+    "steak_knife_handle_length_mm": 106.0,
+    "steak_knife_blade_length_mm": 116.0,
+    "steak_knife_blade_width_mm": 17.6,
+    "steak_knife_blade_thickness_mm": 1.0,
+    "steak_knife_handle_top_width_mm": 24.0,
+    "steak_knife_handle_narrow_width_mm": 16.5,
+    "steak_knife_handle_main_width_mm": 21.0,
+    "steak_knife_handle_bottom_width_mm": 27.5,
+    "steak_knife_handle_thickness_mm": 15.2,
+    "steak_knife_handle_neck_thickness_mm": 11.0,
+    "steak_knife_handle_tip_thickness_mm": 6.0,
+    "steak_knife_handle_cap_length_mm": 11.0,
+    "steak_knife_handle_cap_peak_offset_mm": 5.0,
+    "steak_knife_handle_neck_length_mm": 22.0,
+    "steak_knife_handle_edge_bulb_length_mm": 18.0,
+    "steak_knife_handle_edge_bulb_peak_offset_mm": 9.0,
+    "steak_knife_handle_edge_bulb_flat_length_mm": 12.0,
+    "steak_knife_slot_middle_extension_mm": 4.0,
     "fit_clearance_mm": 1.0,
     "vertical_clearance_mm": 1.0,
     "knife_slot_clearance_mm": 0.5,
@@ -63,31 +84,25 @@ PARAMETERS = {
     "wall_thickness_mm": 1.0,
 }
 PRINT_NOTES = (
-    "The fork and spoon modules store each group of eight in one maximum-depth, photo-scaled "
-    "silhouette pocket that leaves a 2 mm floor. Each handle pocket extends 4 mm beyond the "
-    "measured utensil and rises 4 mm toward the handle butt. One aligned, wall-to-wall grab bay "
-    "with a straight rectangular middle and rounded ends spans both utensil handles in the lower "
-    "half of each module. A 2 mm tapered lead-in over the upper 8 mm guides utensils into the "
-    "fitted lower profile. The 2U spoon module keeps both spoons facing the same direction and "
-    "staggers their cavities laterally and lengthwise. Fork handles use their measured 10 mm and "
-    "9 mm bottom widths and taper to 7 mm; spoon handles use a measured 10 mm bottom width and "
-    "taper to 7 mm. Fit clearance is added outside those dimensions. The knife module stores "
-    "cavities laterally and lengthwise. Fork handles use their measured 10 mm and 9 mm bottom "
-    "widths and taper to 7 mm; spoon handles use a measured 10 mm bottom width and taper to 7 mm. "
-    "Fit clearance is added outside those dimensions. The knife module stores eight knives side "
-    "by side, blade-edge down, in stepped slots: the 125 mm handle sections are 8.5 mm wide by "
-    "default, while the 111 mm blade sections are 3 mm wide. Each slot tilts upward toward the "
-    "handle end by 3 degrees by default, raising the handle butt about 12 mm relative to the blade "
-    "tip for easier pickup while preserving solid deck material between every slot. Each 6U "
-    "module is split at 3U into front and back STL parts for the configured print bed. Place each "
-    "matching pair together on adjacent Gridfinity cells; the fitted cavity crosses the flush "
-    "center seam. Print with the Gridfinity bases down."
+    "The fork and spoon modules store each group of eight in fitted silhouette pockets with a "
+    "2 mm floor, tapered lead-ins, lifted handles, and a shared wall-to-wall grab bay. The dinner "
+    "knife module stores eight knives side by side, blade-edge down, in stepped slots. The 4U "
+    "steak-knife module adds eight individually fitted edge-down slots traced from calibrated "
+    "broadside and edge-on photos. Its 222 mm profiles use the measured 106 mm handle and 116 mm "
+    "blade, including the 27.5/21/16.5/24 mm broadside transitions. The annotated edge profile "
+    "uses a 15.2 mm main handle, a smooth transition through an 11 mm waist, and an 18 mm upper "
+    "edge bulb with approximately 16 mm width and 12 mm long parallel sides before it curves "
+    "inward to the 6 mm blade entry. Both knife modules add 0.5 mm clearance per slot side "
+    "and tilt the handles upward by 3 degrees for pickup. Each 6U module is split at 3U into front "
+    "and back STL parts; place matching pairs together on adjacent Gridfinity cells and print with "
+    "the bases down."
 )
 
 GRIDFINITY_HEIGHT_UNIT_MM = 7.0
 MINIMUM_CAVITY_FLOOR_MM = 2.0
 MINIMUM_DECK_RING_MM = 2.0
 BOOLEAN_OVERLAP_MM = 0.2
+STEAK_KNIFE_MIDDLE_EXTENSION_START_MM = 22.0
 SPOON_CAVITY_OFFSETS_MM = ((-18.0, -20.0), (17.0, 20.0))
 SPOON_CAP_START_FRACTION = 0.90
 SPOON_CAP_ARC_INTERVALS = 8
@@ -233,6 +248,7 @@ def build(
     fork_unit_width: int = 2,
     spoon_unit_width: int = 2,
     knife_unit_width: int = 2,
+    steak_knife_unit_width: int = 4,
     split_depth_u: float = 3.0,
     large_fork_width_mm: float = 25.0,
     large_fork_length_mm: float = 208.0,
@@ -260,6 +276,26 @@ def build(
     knife_blade_thickness_mm: float = 2.0,
     knife_handle_width_mm: float = 14.0,
     knife_handle_thickness_mm: float = 7.5,
+    steak_knife_count: int = 8,
+    steak_knife_length_mm: float = 222.0,
+    steak_knife_handle_length_mm: float = 106.0,
+    steak_knife_blade_length_mm: float = 116.0,
+    steak_knife_blade_width_mm: float = 17.6,
+    steak_knife_blade_thickness_mm: float = 1.0,
+    steak_knife_handle_top_width_mm: float = 24.0,
+    steak_knife_handle_narrow_width_mm: float = 16.5,
+    steak_knife_handle_main_width_mm: float = 21.0,
+    steak_knife_handle_bottom_width_mm: float = 27.5,
+    steak_knife_handle_thickness_mm: float = 15.2,
+    steak_knife_handle_neck_thickness_mm: float = 11.0,
+    steak_knife_handle_tip_thickness_mm: float = 6.0,
+    steak_knife_handle_cap_length_mm: float = 11.0,
+    steak_knife_handle_cap_peak_offset_mm: float = 5.0,
+    steak_knife_handle_neck_length_mm: float = 22.0,
+    steak_knife_handle_edge_bulb_length_mm: float = 18.0,
+    steak_knife_handle_edge_bulb_peak_offset_mm: float = 9.0,
+    steak_knife_handle_edge_bulb_flat_length_mm: float = 12.0,
+    steak_knife_slot_middle_extension_mm: float = 4.0,
     fit_clearance_mm: float = 1.0,
     vertical_clearance_mm: float = 1.0,
     knife_slot_clearance_mm: float = 0.5,
@@ -274,13 +310,14 @@ def build(
     utensil_handle_lift_mm: float = 4.0,
     wall_thickness_mm: float = 1.0,
 ):
-    """Build three fitted modules and return their six print-bed-safe halves."""
+    """Build four fitted modules and return their eight print-bed-safe halves."""
     _validate_parameters(
         unit_depth=unit_depth,
         unit_height=unit_height,
         fork_unit_width=fork_unit_width,
         spoon_unit_width=spoon_unit_width,
         knife_unit_width=knife_unit_width,
+        steak_knife_unit_width=steak_knife_unit_width,
         split_depth_u=split_depth_u,
         large_fork_width_mm=large_fork_width_mm,
         large_fork_length_mm=large_fork_length_mm,
@@ -308,6 +345,26 @@ def build(
         knife_blade_thickness_mm=knife_blade_thickness_mm,
         knife_handle_width_mm=knife_handle_width_mm,
         knife_handle_thickness_mm=knife_handle_thickness_mm,
+        steak_knife_count=steak_knife_count,
+        steak_knife_length_mm=steak_knife_length_mm,
+        steak_knife_handle_length_mm=steak_knife_handle_length_mm,
+        steak_knife_blade_length_mm=steak_knife_blade_length_mm,
+        steak_knife_blade_width_mm=steak_knife_blade_width_mm,
+        steak_knife_blade_thickness_mm=steak_knife_blade_thickness_mm,
+        steak_knife_handle_top_width_mm=steak_knife_handle_top_width_mm,
+        steak_knife_handle_narrow_width_mm=steak_knife_handle_narrow_width_mm,
+        steak_knife_handle_main_width_mm=steak_knife_handle_main_width_mm,
+        steak_knife_handle_bottom_width_mm=steak_knife_handle_bottom_width_mm,
+        steak_knife_handle_thickness_mm=steak_knife_handle_thickness_mm,
+        steak_knife_handle_neck_thickness_mm=steak_knife_handle_neck_thickness_mm,
+        steak_knife_handle_tip_thickness_mm=steak_knife_handle_tip_thickness_mm,
+        steak_knife_handle_cap_length_mm=steak_knife_handle_cap_length_mm,
+        steak_knife_handle_cap_peak_offset_mm=steak_knife_handle_cap_peak_offset_mm,
+        steak_knife_handle_neck_length_mm=steak_knife_handle_neck_length_mm,
+        steak_knife_handle_edge_bulb_length_mm=steak_knife_handle_edge_bulb_length_mm,
+        steak_knife_handle_edge_bulb_peak_offset_mm=steak_knife_handle_edge_bulb_peak_offset_mm,
+        steak_knife_handle_edge_bulb_flat_length_mm=steak_knife_handle_edge_bulb_flat_length_mm,
+        steak_knife_slot_middle_extension_mm=steak_knife_slot_middle_extension_mm,
         fit_clearance_mm=fit_clearance_mm,
         vertical_clearance_mm=vertical_clearance_mm,
         knife_slot_clearance_mm=knife_slot_clearance_mm,
@@ -416,6 +473,51 @@ def build(
         knife_handle_lift_angle_degrees=knife_handle_lift_angle_degrees,
         wall_thickness_mm=wall_thickness_mm,
     )
+    steak_knife_physical_profile = _steak_knife_section_profile(
+        knife_length_mm=steak_knife_length_mm,
+        handle_length_mm=steak_knife_handle_length_mm,
+        blade_length_mm=steak_knife_blade_length_mm,
+        blade_width_mm=steak_knife_blade_width_mm,
+        blade_thickness_mm=steak_knife_blade_thickness_mm,
+        handle_top_width_mm=steak_knife_handle_top_width_mm,
+        handle_narrow_width_mm=steak_knife_handle_narrow_width_mm,
+        handle_main_width_mm=steak_knife_handle_main_width_mm,
+        handle_bottom_width_mm=steak_knife_handle_bottom_width_mm,
+        handle_thickness_mm=steak_knife_handle_thickness_mm,
+        handle_neck_thickness_mm=steak_knife_handle_neck_thickness_mm,
+        handle_tip_thickness_mm=steak_knife_handle_tip_thickness_mm,
+        handle_cap_length_mm=steak_knife_handle_cap_length_mm,
+        handle_cap_peak_offset_mm=steak_knife_handle_cap_peak_offset_mm,
+        handle_neck_length_mm=steak_knife_handle_neck_length_mm,
+        handle_edge_bulb_length_mm=steak_knife_handle_edge_bulb_length_mm,
+        handle_edge_bulb_peak_offset_mm=steak_knife_handle_edge_bulb_peak_offset_mm,
+        handle_edge_bulb_flat_length_mm=steak_knife_handle_edge_bulb_flat_length_mm,
+    )
+    steak_knife_slot_profile = _extend_steak_knife_profile_middle(
+        steak_knife_physical_profile,
+        extension_mm=steak_knife_slot_middle_extension_mm,
+    )
+    steak_knife_module = _build_knife_module(
+        unit_width=steak_knife_unit_width,
+        unit_depth=unit_depth,
+        unit_height=unit_height,
+        knife_count=steak_knife_count,
+        knife_length_mm=steak_knife_length_mm + steak_knife_slot_middle_extension_mm,
+        knife_handle_length_mm=(
+            steak_knife_handle_length_mm + steak_knife_slot_middle_extension_mm
+        ),
+        knife_blade_length_mm=steak_knife_blade_length_mm,
+        knife_blade_width_mm=steak_knife_blade_width_mm,
+        knife_blade_thickness_mm=steak_knife_blade_thickness_mm,
+        knife_handle_width_mm=steak_knife_handle_bottom_width_mm,
+        knife_handle_thickness_mm=steak_knife_handle_thickness_mm,
+        vertical_clearance_mm=vertical_clearance_mm,
+        knife_slot_clearance_mm=knife_slot_clearance_mm,
+        knife_rib_mm=knife_rib_mm,
+        knife_handle_lift_angle_degrees=knife_handle_lift_angle_degrees,
+        wall_thickness_mm=wall_thickness_mm,
+        section_profile=steak_knife_slot_profile,
+    )
 
     parts = {}
     parts.update(
@@ -445,6 +547,17 @@ def build(
             "knife_module",
             knife_module,
             unit_width=knife_unit_width,
+            unit_depth=unit_depth,
+            unit_height=unit_height,
+            split_depth_u=split_depth_u,
+            wall_thickness_mm=wall_thickness_mm,
+        )
+    )
+    parts.update(
+        _split_module(
+            "steak_knife_module",
+            steak_knife_module,
+            unit_width=steak_knife_unit_width,
             unit_depth=unit_depth,
             unit_height=unit_height,
             split_depth_u=split_depth_u,
@@ -601,6 +714,156 @@ def _build_stacked_utensil_module(
     return box.union(fill).cut(cutter).clean()
 
 
+def _steak_knife_section_profile(
+    *,
+    knife_length_mm: float,
+    handle_length_mm: float,
+    blade_length_mm: float,
+    blade_width_mm: float,
+    blade_thickness_mm: float,
+    handle_top_width_mm: float,
+    handle_narrow_width_mm: float,
+    handle_main_width_mm: float,
+    handle_bottom_width_mm: float,
+    handle_thickness_mm: float,
+    handle_neck_thickness_mm: float,
+    handle_tip_thickness_mm: float,
+    handle_cap_length_mm: float,
+    handle_cap_peak_offset_mm: float,
+    handle_neck_length_mm: float,
+    handle_edge_bulb_length_mm: float,
+    handle_edge_bulb_peak_offset_mm: float,
+    handle_edge_bulb_flat_length_mm: float,
+) -> tuple[tuple[float, float, float], ...]:
+    """Return independent edge and broadside curves fitted to the physical handle traces."""
+    handle_transition_mm = min(BOOLEAN_OVERLAP_MM, handle_length_mm * 0.01)
+    blade_start_mm = handle_length_mm
+    handle_end_station_mm = handle_length_mm - handle_transition_mm
+    cap_start_mm = handle_length_mm - handle_cap_length_mm
+    cap_peak_mm = handle_length_mm - handle_cap_peak_offset_mm
+    neck_start_mm = cap_start_mm - handle_neck_length_mm
+    neck_midpoint_mm = (neck_start_mm + cap_start_mm) / 2.0
+    lower_neck_curve_mm = neck_start_mm - 0.50 * handle_neck_length_mm
+    pre_neck_curve_mm = neck_start_mm - 0.23 * handle_neck_length_mm
+    narrow_broadside_mm = neck_start_mm + 0.64 * handle_neck_length_mm
+    early_cap_mm = cap_start_mm + 0.35 * (cap_peak_mm - cap_start_mm)
+    late_cap_mm = cap_start_mm + 0.70 * (cap_peak_mm - cap_start_mm)
+    early_tip_mm = cap_peak_mm + 0.35 * (handle_end_station_mm - cap_peak_mm)
+    late_tip_mm = cap_peak_mm + 0.70 * (handle_end_station_mm - cap_peak_mm)
+    edge_bulb_start_mm = handle_length_mm - handle_edge_bulb_length_mm
+    edge_bulb_peak_mm = handle_length_mm - handle_edge_bulb_peak_offset_mm
+    edge_bulb_half_flat_mm = handle_edge_bulb_flat_length_mm / 2.0
+    edge_plateau_start_mm = edge_bulb_peak_mm - edge_bulb_half_flat_mm
+    edge_plateau_end_mm = edge_bulb_peak_mm + edge_bulb_half_flat_mm
+
+    edge_controls = (
+        (0.0, 0.2),
+        (1.5, 0.42 * handle_thickness_mm),
+        (3.0, 0.72 * handle_thickness_mm),
+        (5.0, 0.94 * handle_thickness_mm),
+        (7.0, handle_thickness_mm),
+        (lower_neck_curve_mm, handle_thickness_mm),
+        (pre_neck_curve_mm, 0.90 * handle_thickness_mm),
+        (neck_start_mm, 0.84 * handle_thickness_mm),
+        (neck_start_mm + 0.23 * handle_neck_length_mm, 1.06 * handle_neck_thickness_mm),
+        (neck_midpoint_mm, handle_neck_thickness_mm),
+        (edge_bulb_start_mm, 0.92 * handle_thickness_mm),
+        (edge_plateau_start_mm, 1.04 * handle_thickness_mm),
+        (edge_plateau_end_mm, 1.04 * handle_thickness_mm),
+        (handle_end_station_mm, handle_tip_thickness_mm),
+    )
+    broadside_controls = (
+        (0.0, 0.0),
+        (3.0, 0.31 * handle_bottom_width_mm),
+        (6.0, 0.69 * handle_bottom_width_mm),
+        (9.0, 0.92 * handle_bottom_width_mm),
+        (12.0, handle_bottom_width_mm),
+        (
+            18.0,
+            handle_main_width_mm + 0.40 * (handle_bottom_width_mm - handle_main_width_mm),
+        ),
+        (22.0, handle_main_width_mm),
+        (lower_neck_curve_mm, handle_main_width_mm),
+        (pre_neck_curve_mm, 0.99 * handle_main_width_mm),
+        (neck_start_mm, 0.97 * handle_main_width_mm),
+        (neck_start_mm + 0.23 * handle_neck_length_mm, 0.90 * handle_main_width_mm),
+        (neck_midpoint_mm, 1.03 * handle_narrow_width_mm),
+        (narrow_broadside_mm, handle_narrow_width_mm),
+        (neck_start_mm + 0.77 * handle_neck_length_mm, 1.02 * handle_narrow_width_mm),
+        (cap_start_mm, 0.80 * handle_top_width_mm),
+        (early_cap_mm, 0.89 * handle_top_width_mm),
+        (late_cap_mm, 0.97 * handle_top_width_mm),
+        (cap_peak_mm, handle_top_width_mm),
+        (early_tip_mm, handle_top_width_mm),
+        (late_tip_mm, handle_top_width_mm),
+        (handle_end_station_mm, handle_top_width_mm),
+    )
+    handle_distances = tuple(
+        sorted({distance_mm for distance_mm, _ in (*edge_controls, *broadside_controls)})
+    )
+    handle_sections = tuple(
+        (
+            distance_mm,
+            _interpolate_profile_value(edge_controls, distance_mm),
+            _interpolate_profile_value(broadside_controls, distance_mm),
+        )
+        for distance_mm in handle_distances
+    )
+    return (
+        *handle_sections,
+        (blade_start_mm, blade_thickness_mm, blade_width_mm),
+        (blade_start_mm + 0.22 * blade_length_mm, blade_thickness_mm, blade_width_mm),
+        (blade_start_mm + 0.46 * blade_length_mm, blade_thickness_mm, 0.97 * blade_width_mm),
+        (blade_start_mm + 0.68 * blade_length_mm, blade_thickness_mm, 0.85 * blade_width_mm),
+        (blade_start_mm + 0.86 * blade_length_mm, blade_thickness_mm, 0.51 * blade_width_mm),
+        (knife_length_mm, blade_thickness_mm, 0.0),
+    )
+
+
+def _extend_steak_knife_profile_middle(
+    profile: Sequence[tuple[float, float, float]], *, extension_mm: float
+) -> tuple[tuple[float, float, float], ...]:
+    """Extend the straight middle handle section without changing either end profile."""
+    return tuple(
+        (
+            distance_mm + extension_mm,
+            thickness_mm,
+            edge_depth_mm,
+        )
+        if distance_mm > STEAK_KNIFE_MIDDLE_EXTENSION_START_MM
+        else (distance_mm, thickness_mm, edge_depth_mm)
+        for distance_mm, thickness_mm, edge_depth_mm in profile
+    )
+
+
+def _interpolate_profile_value(
+    control_points: Sequence[tuple[float, float]], distance_mm: float
+) -> float:
+    for (start_distance, start_value), (end_distance, end_value) in zip(
+        control_points, control_points[1:], strict=False
+    ):
+        if distance_mm <= end_distance:
+            span_fraction = (distance_mm - start_distance) / (end_distance - start_distance)
+            return start_value + span_fraction * (end_value - start_value)
+    return control_points[-1][1]
+
+
+def _steak_knife_broadside_spine_offset(
+    distance_mm: float, *, handle_bottom_width_mm: float
+) -> float:
+    """Return the traced spine offset that centers the pointed handle butt."""
+    controls = (
+        (0.0, -0.50 * handle_bottom_width_mm),
+        (3.0, -0.38 * handle_bottom_width_mm),
+        (6.0, -0.22 * handle_bottom_width_mm),
+        (9.0, -0.08 * handle_bottom_width_mm),
+        (12.0, 0.0),
+    )
+    if distance_mm >= controls[-1][0]:
+        return 0.0
+    return _interpolate_profile_value(controls, distance_mm)
+
+
 def _build_knife_module(
     *,
     unit_width: int,
@@ -619,6 +882,7 @@ def _build_knife_module(
     knife_rib_mm: float,
     knife_handle_lift_angle_degrees: float,
     wall_thickness_mm: float,
+    section_profile: Sequence[tuple[float, float, float]] | None = None,
 ):
     from cqgridfinity import GR_BASE_HEIGHT, GR_FLOOR
 
@@ -636,54 +900,81 @@ def _build_knife_module(
     inner_y_min = bounds.ymin + wall_thickness_mm
     inner_y_max = bounds.ymax - wall_thickness_mm
 
-    handle_slot_width = knife_handle_thickness_mm + 2.0 * knife_slot_clearance_mm
-    blade_slot_width = knife_blade_thickness_mm + 2.0 * knife_slot_clearance_mm
-    slot_pitch = handle_slot_width + knife_rib_mm
-    slots_width = knife_count * handle_slot_width + (knife_count - 1) * knife_rib_mm
+    if section_profile is None:
+        maximum_thickness_mm = knife_handle_thickness_mm
+        maximum_edge_depth_mm = max(knife_handle_width_mm, knife_blade_width_mm)
+    else:
+        _validate_knife_section_profile(section_profile, knife_length_mm=knife_length_mm)
+        maximum_thickness_mm = max(section[1] for section in section_profile)
+        maximum_edge_depth_mm = max(section[2] for section in section_profile)
+
+    maximum_slot_width = maximum_thickness_mm + 2.0 * knife_slot_clearance_mm
+    slot_pitch = maximum_slot_width + knife_rib_mm
+    slots_width = knife_count * maximum_slot_width + (knife_count - 1) * knife_rib_mm
     if slots_width + 2.0 * MINIMUM_DECK_RING_MM > inner_x_max - inner_x_min:
         raise ValueError("The knife slots do not leave a safe deck ring in the selected width.")
     cleared_length = knife_length_mm + 2.0 * knife_slot_clearance_mm
     if cleared_length + 2.0 * MINIMUM_DECK_RING_MM > inner_y_max - inner_y_min:
         raise ValueError("The knife slots do not leave a safe deck ring in the selected depth.")
 
-    handle_depth = knife_handle_width_mm + vertical_clearance_mm
-    blade_depth = knife_blade_width_mm + vertical_clearance_mm
+    maximum_slot_depth = maximum_edge_depth_mm + vertical_clearance_mm
     _validate_cavity_floor(
         deck_top_z=deck_top_z,
         floor_top_z=floor_top_z,
-        pocket_depth_mm=blade_depth,
+        pocket_depth_mm=maximum_slot_depth,
     )
     first_center_x = -(knife_count - 1) * slot_pitch / 2.0
     handle_start_y = -knife_length_mm / 2.0 - knife_slot_clearance_mm
     transition_y = -knife_length_mm / 2.0 + knife_handle_length_mm
     blade_tip_y = knife_length_mm / 2.0
     blade_end_y = blade_tip_y + knife_slot_clearance_mm
+
+    if section_profile is None:
+        blade_depth = knife_blade_width_mm + vertical_clearance_mm
+    else:
+        blade_depth = section_profile[-1][2] + vertical_clearance_mm
     blade_pivot_z = deck_top_z - blade_depth
 
     cutter = None
     for slot_index in range(knife_count):
         center_x = first_center_x + slot_index * slot_pitch
-        handle = _build_rounded_section_along_y(
-            center_x=center_x,
-            start_y=handle_start_y,
-            end_y=transition_y + BOOLEAN_OVERLAP_MM,
-            width_mm=handle_slot_width,
-            bottom_z=deck_top_z - handle_depth,
-            top_z=deck_top_z + BOOLEAN_OVERLAP_MM,
-            round_start=True,
-            round_end=False,
-        )
-        blade = _build_rounded_section_along_y(
-            center_x=center_x,
-            start_y=transition_y - BOOLEAN_OVERLAP_MM,
-            end_y=blade_end_y,
-            width_mm=blade_slot_width,
-            bottom_z=deck_top_z - blade_depth,
-            top_z=deck_top_z + BOOLEAN_OVERLAP_MM,
-            round_start=False,
-            round_end=True,
-        )
-        slot = handle.union(blade).rotate(
+        if section_profile is None:
+            handle_slot_width = knife_handle_thickness_mm + 2.0 * knife_slot_clearance_mm
+            blade_slot_width = knife_blade_thickness_mm + 2.0 * knife_slot_clearance_mm
+            handle_depth = knife_handle_width_mm + vertical_clearance_mm
+            blade_depth = knife_blade_width_mm + vertical_clearance_mm
+            handle = _build_rounded_section_along_y(
+                center_x=center_x,
+                start_y=handle_start_y,
+                end_y=transition_y + BOOLEAN_OVERLAP_MM,
+                width_mm=handle_slot_width,
+                bottom_z=deck_top_z - handle_depth,
+                top_z=deck_top_z + BOOLEAN_OVERLAP_MM,
+                round_start=True,
+                round_end=False,
+            )
+            blade = _build_rounded_section_along_y(
+                center_x=center_x,
+                start_y=transition_y - BOOLEAN_OVERLAP_MM,
+                end_y=blade_end_y,
+                width_mm=blade_slot_width,
+                bottom_z=deck_top_z - blade_depth,
+                top_z=deck_top_z + BOOLEAN_OVERLAP_MM,
+                round_start=False,
+                round_end=True,
+            )
+            slot = handle.union(blade)
+        else:
+            slot = _build_profiled_knife_slot(
+                center_x=center_x,
+                start_y=-knife_length_mm / 2.0,
+                deck_top_z=deck_top_z,
+                knife_length_mm=knife_length_mm,
+                section_profile=section_profile,
+                lateral_clearance_mm=knife_slot_clearance_mm,
+                vertical_clearance_mm=vertical_clearance_mm,
+            )
+        slot = slot.rotate(
             (0.0, blade_tip_y, blade_pivot_z),
             (1.0, blade_tip_y, blade_pivot_z),
             -knife_handle_lift_angle_degrees,
@@ -707,6 +998,66 @@ def _build_knife_module(
         z_max=deck_top_z,
     )
     return box.union(fill).cut(cutter).clean()
+
+
+def _validate_knife_section_profile(
+    section_profile: Sequence[tuple[float, float, float]], *, knife_length_mm: float
+) -> None:
+    if len(section_profile) < 2:
+        raise ValueError("section_profile must contain at least two stations.")
+    distances = tuple(section[0] for section in section_profile)
+    if abs(distances[0]) > 1e-6 or abs(distances[-1] - knife_length_mm) > 1e-6:
+        raise ValueError("section_profile must span the complete knife length.")
+    if any(end <= start for start, end in zip(distances, distances[1:], strict=False)):
+        raise ValueError("section_profile station distances must increase.")
+    if any(thickness <= 0.0 or edge_depth < 0.0 for _, thickness, edge_depth in section_profile):
+        raise ValueError(
+            "section_profile dimensions must be positive, except for a zero tip depth."
+        )
+
+
+def _build_profiled_knife_slot(
+    *,
+    center_x: float,
+    start_y: float,
+    deck_top_z: float,
+    knife_length_mm: float,
+    section_profile: Sequence[tuple[float, float, float]],
+    lateral_clearance_mm: float,
+    vertical_clearance_mm: float,
+):
+    import cadquery as cq
+
+    extended_profile = list(section_profile)
+    if lateral_clearance_mm > 0.0:
+        extended_profile.insert(
+            0,
+            (-lateral_clearance_mm, section_profile[0][1], section_profile[0][2]),
+        )
+        extended_profile.append(
+            (
+                knife_length_mm + lateral_clearance_mm,
+                section_profile[-1][1],
+                section_profile[-1][2],
+            )
+        )
+
+    wires = []
+    top_z = deck_top_z + BOOLEAN_OVERLAP_MM
+    for distance_mm, thickness_mm, edge_depth_mm in extended_profile:
+        bottom_z = deck_top_z - edge_depth_mm - vertical_clearance_mm
+        center_z = (bottom_z + top_z) / 2.0
+        plane = cq.Plane(
+            origin=(center_x, start_y + distance_mm, center_z),
+            xDir=(1.0, 0.0, 0.0),
+            normal=(0.0, 1.0, 0.0),
+        )
+        wires.append(
+            cq.Workplane(plane)
+            .rect(thickness_mm + 2.0 * lateral_clearance_mm, top_z - bottom_z)
+            .val()
+        )
+    return cq.Workplane(obj=cq.Solid.makeLoft(wires, ruled=True))
 
 
 def _render_empty_module(
@@ -1087,6 +1438,8 @@ def _validate_parameters(**parameters) -> None:
         "spoon_unit_width",
         "knife_unit_width",
         "knife_count",
+        "steak_knife_unit_width",
+        "steak_knife_count",
     )
     for name in integer_names:
         value = parameters[name]
@@ -1141,3 +1494,70 @@ def _validate_parameters(**parameters) -> None:
     component_length = parameters["knife_handle_length_mm"] + parameters["knife_blade_length_mm"]
     if abs(component_length - knife_length_mm) > 1e-6:
         raise ValueError("knife handle and blade lengths must add up to knife_length_mm.")
+
+    steak_knife_length_mm = parameters["steak_knife_length_mm"]
+    steak_component_length = (
+        parameters["steak_knife_handle_length_mm"] + parameters["steak_knife_blade_length_mm"]
+    )
+    if abs(steak_component_length - steak_knife_length_mm) > 1e-6:
+        raise ValueError(
+            "steak knife handle and blade lengths must add up to steak_knife_length_mm."
+        )
+
+    steak_handle_widths = (
+        parameters["steak_knife_handle_bottom_width_mm"],
+        parameters["steak_knife_handle_top_width_mm"],
+        parameters["steak_knife_handle_main_width_mm"],
+        parameters["steak_knife_handle_narrow_width_mm"],
+    )
+    if any(
+        wider <= narrower
+        for wider, narrower in zip(steak_handle_widths, steak_handle_widths[1:], strict=False)
+    ):
+        raise ValueError(
+            "steak knife handle widths must descend from bottom to top, main, and narrow widths."
+        )
+    if (
+        parameters["steak_knife_handle_thickness_mm"]
+        <= parameters["steak_knife_handle_neck_thickness_mm"]
+    ):
+        raise ValueError(
+            "steak_knife_handle_thickness_mm must exceed steak_knife_handle_neck_thickness_mm."
+        )
+    if (
+        parameters["steak_knife_handle_thickness_mm"]
+        <= parameters["steak_knife_handle_tip_thickness_mm"]
+    ):
+        raise ValueError(
+            "steak_knife_handle_thickness_mm must exceed steak_knife_handle_tip_thickness_mm."
+        )
+
+    handle_cap_length_mm = parameters["steak_knife_handle_cap_length_mm"]
+    handle_cap_peak_offset_mm = parameters["steak_knife_handle_cap_peak_offset_mm"]
+    handle_neck_length_mm = parameters["steak_knife_handle_neck_length_mm"]
+    handle_length_mm = parameters["steak_knife_handle_length_mm"]
+    if handle_cap_peak_offset_mm >= handle_cap_length_mm:
+        raise ValueError(
+            "steak_knife_handle_cap_peak_offset_mm must be less than "
+            "steak_knife_handle_cap_length_mm."
+        )
+    if handle_cap_length_mm + handle_neck_length_mm >= handle_length_mm:
+        raise ValueError("The steak knife neck and cap must fit inside the handle length.")
+
+    edge_bulb_length_mm = parameters["steak_knife_handle_edge_bulb_length_mm"]
+    edge_bulb_peak_offset_mm = parameters["steak_knife_handle_edge_bulb_peak_offset_mm"]
+    if edge_bulb_peak_offset_mm >= edge_bulb_length_mm:
+        raise ValueError(
+            "steak_knife_handle_edge_bulb_peak_offset_mm must be less than "
+            "steak_knife_handle_edge_bulb_length_mm."
+        )
+    if edge_bulb_length_mm >= handle_length_mm:
+        raise ValueError("The steak knife edge bulb must fit inside the handle length.")
+
+    edge_bulb_flat_length_mm = parameters["steak_knife_handle_edge_bulb_flat_length_mm"]
+    edge_bulb_half_flat_mm = edge_bulb_flat_length_mm / 2.0
+    if edge_bulb_half_flat_mm >= min(
+        edge_bulb_peak_offset_mm,
+        edge_bulb_length_mm - edge_bulb_peak_offset_mm,
+    ):
+        raise ValueError("The steak knife edge bulb flat must fit inside the bulb length.")

@@ -1,4 +1,4 @@
-"""Tests for the split Cambridge Beacon Gridfinity silverware modules."""
+"""Tests for the split Cambridge Beacon Gridfinity silverware and steak-knife modules."""
 
 from __future__ import annotations
 
@@ -7,9 +7,13 @@ import unittest
 from print_models.catalog import load_models
 from print_models.models.gridfinity_silverware_set import (
     PARAMETERS,
+    _build_profiled_knife_slot,
     _build_utensil_cutter,
+    _extend_steak_knife_profile_middle,
     _fork_width_profile,
     _spoon_width_profile,
+    _steak_knife_broadside_spine_offset,
+    _steak_knife_section_profile,
     build,
 )
 
@@ -58,8 +62,29 @@ class SilverwareSetGeometryTests(unittest.TestCase):
         self.assertEqual(PARAMETERS["knife_blade_length_mm"], 111.0)
         self.assertEqual(PARAMETERS["knife_handle_lift_angle_degrees"], 3.0)
         self.assertFalse(any(name.startswith("knife_lift_trough_") for name in PARAMETERS))
+        self.assertEqual(PARAMETERS["steak_knife_unit_width"], 4)
+        self.assertEqual(PARAMETERS["steak_knife_count"], 8)
+        self.assertEqual(PARAMETERS["steak_knife_length_mm"], 222.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_length_mm"], 106.0)
+        self.assertEqual(PARAMETERS["steak_knife_blade_length_mm"], 116.0)
+        self.assertEqual(PARAMETERS["steak_knife_blade_width_mm"], 17.6)
+        self.assertEqual(PARAMETERS["steak_knife_blade_thickness_mm"], 1.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_top_width_mm"], 24.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_narrow_width_mm"], 16.5)
+        self.assertEqual(PARAMETERS["steak_knife_handle_main_width_mm"], 21.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_bottom_width_mm"], 27.5)
+        self.assertEqual(PARAMETERS["steak_knife_handle_thickness_mm"], 15.2)
+        self.assertEqual(PARAMETERS["steak_knife_handle_neck_thickness_mm"], 11.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_tip_thickness_mm"], 6.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_cap_length_mm"], 11.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_cap_peak_offset_mm"], 5.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_neck_length_mm"], 22.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_edge_bulb_length_mm"], 18.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_edge_bulb_peak_offset_mm"], 9.0)
+        self.assertEqual(PARAMETERS["steak_knife_handle_edge_bulb_flat_length_mm"], 12.0)
+        self.assertEqual(PARAMETERS["steak_knife_slot_middle_extension_mm"], 4.0)
 
-    def test_build_returns_six_named_printable_halves(self) -> None:
+    def test_build_returns_eight_named_printable_halves(self) -> None:
         self.assertEqual(
             set(self.parts),
             {
@@ -69,6 +94,8 @@ class SilverwareSetGeometryTests(unittest.TestCase):
                 "spoon_module_back",
                 "knife_module_front",
                 "knife_module_back",
+                "steak_knife_module_front",
+                "steak_knife_module_back",
             },
         )
         for part in self.parts.values():
@@ -79,6 +106,7 @@ class SilverwareSetGeometryTests(unittest.TestCase):
             "fork_module": 83.5,
             "spoon_module": 83.5,
             "knife_module": 83.5,
+            "steak_knife_module": 167.5,
         }
         for module_name, expected_width in expected_widths.items():
             for half_name in ("front", "back"):
@@ -288,6 +316,83 @@ class SilverwareSetGeometryTests(unittest.TestCase):
         for center_x in rib_centers:
             self.assertTrue(front.isInside(cq.Vector(center_x, former_trough_center_y, 37.0), 1e-6))
 
+    def test_steak_knife_cutter_follows_calibrated_full_profile(self) -> None:
+        import cadquery as cq
+
+        profile = _steak_knife_section_profile(
+            knife_length_mm=222.0,
+            handle_length_mm=106.0,
+            blade_length_mm=116.0,
+            blade_width_mm=17.6,
+            blade_thickness_mm=1.0,
+            handle_top_width_mm=24.0,
+            handle_narrow_width_mm=16.5,
+            handle_main_width_mm=21.0,
+            handle_bottom_width_mm=27.5,
+            handle_thickness_mm=15.2,
+            handle_neck_thickness_mm=11.0,
+            handle_tip_thickness_mm=6.0,
+            handle_cap_length_mm=11.0,
+            handle_cap_peak_offset_mm=5.0,
+            handle_neck_length_mm=22.0,
+            handle_edge_bulb_length_mm=18.0,
+            handle_edge_bulb_peak_offset_mm=9.0,
+            handle_edge_bulb_flat_length_mm=12.0,
+        )
+        self.assertEqual(profile[0], (0.0, 0.2, 0.0))
+        self.assertEqual(profile[7], (12.0, 15.2, 27.5))
+        self.assertEqual(profile[9], (22.0, 15.2, 21.0))
+        self.assertEqual(profile[14], (84.0, 11.0, 16.995))
+        self.assertAlmostEqual(profile[15][0], 87.08)
+        self.assertAlmostEqual(profile[15][2], 16.5)
+        self.assertAlmostEqual(profile[18][0], 91.0)
+        self.assertAlmostEqual(profile[18][1], 15.808)
+        self.assertAlmostEqual(profile[24][0], 103.0)
+        self.assertAlmostEqual(profile[24][1], 15.808)
+        self.assertAlmostEqual(profile[24][0] - profile[18][0], 12.0)
+        self.assertAlmostEqual(profile[26][0], 105.8)
+        self.assertAlmostEqual(profile[26][1], 6.0)
+        self.assertAlmostEqual(profile[26][2], 24.0)
+        self.assertEqual(
+            _steak_knife_broadside_spine_offset(0.0, handle_bottom_width_mm=27.5),
+            -13.75,
+        )
+        self.assertEqual(
+            _steak_knife_broadside_spine_offset(12.0, handle_bottom_width_mm=27.5),
+            0.0,
+        )
+        slot_profile = _extend_steak_knife_profile_middle(profile, extension_mm=4.0)
+        self.assertEqual(slot_profile[9][0], 22.0)
+        self.assertEqual(slot_profile[10][0], 66.0)
+        self.assertEqual(slot_profile[-1][0], 226.0)
+        cutter = _build_profiled_knife_slot(
+            center_x=0.0,
+            start_y=0.0,
+            deck_top_z=42.0,
+            knife_length_mm=222.0,
+            section_profile=profile,
+            lateral_clearance_mm=0.5,
+            vertical_clearance_mm=1.0,
+        ).val()
+        bounds = cutter.BoundingBox()
+
+        self.assertAlmostEqual(bounds.xlen, 16.808, places=3)
+        self.assertAlmostEqual(bounds.ymin, -0.5, places=3)
+        self.assertAlmostEqual(bounds.ymax, 222.5, places=3)
+        self.assertAlmostEqual(bounds.zmin, 13.5, places=3)
+        self.assertAlmostEqual(bounds.zmax, 42.2, places=3)
+
+        self.assertTrue(cutter.isInside(cq.Vector(8.0, 45.0, 20.0), 1e-6))
+        self.assertFalse(cutter.isInside(cq.Vector(8.2, 45.0, 20.0), 1e-6))
+        self.assertTrue(cutter.isInside(cq.Vector(5.9, 84.0, 30.0), 1e-6))
+        self.assertFalse(cutter.isInside(cq.Vector(6.1, 84.0, 30.0), 1e-6))
+        self.assertTrue(cutter.isInside(cq.Vector(3.4, 105.8, 30.0), 1e-6))
+        self.assertFalse(cutter.isInside(cq.Vector(3.6, 105.8, 30.0), 1e-6))
+        self.assertTrue(cutter.isInside(cq.Vector(0.9, 132.0, 30.0), 1e-6))
+        self.assertFalse(cutter.isInside(cq.Vector(1.1, 132.0, 30.0), 1e-6))
+        self.assertFalse(cutter.isInside(cq.Vector(0.0, 132.0, 23.3), 1e-6))
+        self.assertTrue(cutter.isInside(cq.Vector(0.0, 132.0, 23.5), 1e-6))
+
     def test_every_export_part_is_one_valid_shell(self) -> None:
         for name, part in self.parts.items():
             with self.subTest(name=name):
@@ -297,6 +402,24 @@ class SilverwareSetGeometryTests(unittest.TestCase):
     def test_rejects_inconsistent_knife_section_lengths(self) -> None:
         with self.assertRaisesRegex(ValueError, "must add up"):
             build(knife_blade_length_mm=110.0)
+
+    def test_rejects_inconsistent_steak_knife_section_lengths(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must add up"):
+            build(steak_knife_blade_length_mm=115.0)
+
+    def test_rejects_invalid_steak_knife_handle_profile(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must descend"):
+            build(steak_knife_handle_main_width_mm=16.0)
+        with self.assertRaisesRegex(ValueError, "must exceed"):
+            build(steak_knife_handle_neck_thickness_mm=15.2)
+        with self.assertRaisesRegex(ValueError, "must exceed"):
+            build(steak_knife_handle_tip_thickness_mm=15.2)
+        with self.assertRaisesRegex(ValueError, "must be less than"):
+            build(steak_knife_handle_cap_peak_offset_mm=11.0)
+        with self.assertRaisesRegex(ValueError, "fit inside"):
+            build(steak_knife_handle_neck_length_mm=95.0)
+        with self.assertRaisesRegex(ValueError, "flat must fit"):
+            build(steak_knife_handle_edge_bulb_flat_length_mm=18.0)
 
     def test_rejects_invalid_knife_handle_lift_angles(self) -> None:
         with self.assertRaisesRegex(ValueError, "must not be negative"):
