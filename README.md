@@ -165,8 +165,8 @@ Model conventions:
   Wrap boxes add an asymmetric semicircular roll trough and raised shelf, scaling only when
   the available cross span or height is smaller than the 2U x 9U reference. Raised floors
   must stop below the lid ceiling; wrap pads and dividers fully buried by the raised shelf
-  are rejected. Lids use the box's split planes; lid seam bars keep every tile connected
-  while breakaway braces remain box-only.
+  are rejected. Lids use the box's split planes; lid seam bars keep every tile connected.
+  Split box parts are exact clips and never include generated lattice supports.
 - `gridfinity_exact_fit_baseplate`: dynamically tiled Gridfinity baseplate that fills an exact
   outer footprint with the largest centered standard grid that fits. Defaults to a 407 mm x 298 mm
   footprint split for a Prusa CORE One+ safe print area.

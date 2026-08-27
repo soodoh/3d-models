@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
@@ -11,8 +10,7 @@ from print_models.dovetail import trapezoidal_panel
 NAME = "gridfinity_box"
 DESCRIPTION = (
     "Gridfinity storage box with a stacking lip or optional matching dovetail lid, solid "
-    "no-hole bottom, customizable lid text, fractional dividers, and reinforced print-bed-aware "
-    "splitting."
+    "no-hole bottom, customizable lid text, fractional dividers, and print-bed-aware splitting."
 )
 PARAMETERS = {
     "unit_width": 5,
@@ -23,7 +21,6 @@ PARAMETERS = {
     "split_width_u": "",
     "split_depth": "",
     "auto_split": True,
-    "split_supports": True,
     "max_print_width": 240.0,
     "max_print_depth": 210.0,
     "allow_rotation": True,
@@ -43,13 +40,9 @@ PRINT_NOTES = (
     "depth. Positions and spans may be decimal units. Boxes are automatically split on "
     "Gridfinity unit boundaries when they exceed the default 240 x 210 mm safe print area "
     "for a Prusa CORE One+. Set auto_split=false to disable this, or provide explicit "
-    "split positions to control either axis. Set split_supports=false to omit breakaway "
-    "braces on split stacking-lip boxes. Split stacking-lip boxes up to 5U high omit "
-    "lattices unless that side has a full-span parallel divider within 2U of the split. "
-    "Wrap and ziplock containers omit supports at every height. All supports use 0.8 mm "
-    "thickness, 2.4 mm upright width, and six 2.4 mm crossbars ending below the stacking "
-    "lip. Divider intersections partition each lattice so no brace "
-    "overlaps a divider. Raised floor specs use x_start-x_end@y_start-y_end:height_mm. Set "
+    "split positions to control either axis. Split parts are exact clips of the modeled box "
+    "and never include generated lattice supports. Raised floor specs use "
+    "x_start-x_end@y_start-y_end:height_mm. Set "
     "lid_style=ziplock or lid_style=wrap to use the hole-free reference body with a 2.4 mm "
     "minimum wall, 7.4 mm floor, low-coordinate profiled stop, and high-coordinate open "
     "end. Set lid_text to add 0.4 mm raised, bold text along the lid rail. Wrap adds an "
@@ -58,7 +51,7 @@ PRINT_NOTES = (
     "1.2 mm of usable cavity height. Raised floors must remain below the lid ceiling and add "
     "visible material rather than being buried in the wrap shelf. Wrap dividers must cross the "
     "open trough rather than lie entirely within that shelf. Oversized lids use the box split "
-    "planes and seam bars; breakaway braces are box-only."
+    "planes and seam bars."
 )
 
 
@@ -83,24 +76,6 @@ class RaisedFloorSpec:
 
 
 @dataclass(frozen=True)
-class SegmentBreakawayBraces:
-    """Whether a split segment needs a brace on either synthetic boundary."""
-
-    minimum_side: bool
-    maximum_side: bool
-
-
-@dataclass(frozen=True)
-class BreakawayBraceProfile:
-    """Shared printable dimensions for a split-face support lattice."""
-
-    thickness_mm: float
-    crossbar_height_mm: float
-    support_width_mm: float
-    crossbar_height_ratios: tuple[float, ...]
-
-
-@dataclass(frozen=True)
 class DovetailLayout:
     """Resolved dimensions and orientation for a matching box and sliding lid."""
 
@@ -121,14 +96,6 @@ class DovetailLayout:
 
 GRID_UNIT_MM = 42.0
 POSITION_TOLERANCE_MM = 1e-6
-BREAKAWAY_DIVIDER_DISTANCE_U = 2.0
-BREAKAWAY_MAX_UNBRACED_HEIGHT_U = 5
-BREAKAWAY_BRACE_THICKNESS_MM = 0.8
-BREAKAWAY_CROSSBAR_HEIGHT_MM = 2.4
-BREAKAWAY_SUPPORT_WIDTH_MM = 2.4
-BREAKAWAY_MAX_BRIDGE_MM = 15.0
-BREAKAWAY_CROSSBAR_COUNT = 6
-BREAKAWAY_LIP_CLEARANCE_MM = 1.0
 DOVETAIL_LID_STYLES = ("none", "ziplock", "wrap")
 DOVETAIL_LID_THICKNESS_MM = 2.4
 DOVETAIL_SIDE_INSET_MM = 3.2
@@ -305,20 +272,13 @@ def split_filled_gridfinity_cradle(
     split_depth_positions_u: tuple[float, ...] = (),
     wall_thickness_mm: float,
 ) -> dict[str, object]:
-    """Split a filled cradle without braces that would obstruct its fitted cutout."""
+    """Split a filled cradle into exact clipped parts."""
     return _split_rendered_box(
         rendered_box,
         split_width_positions_u=split_width_positions_u,
         split_depth_positions_u=split_depth_positions_u,
         unit_width=unit_width,
         unit_depth=unit_depth,
-        unit_height=unit_height,
-        horizontal_specs=(),
-        vertical_specs=(),
-        wall_thickness_mm=wall_thickness_mm,
-        divider_thickness_mm=1.2,
-        breakaway_brace_top_z=0.0,
-        add_breakaway_braces=False,
     )
 
 
@@ -331,7 +291,6 @@ def build(
     split_width_u: str | Sequence[float] = "",
     split_depth: str | Sequence[float] = "",
     auto_split: bool = True,
-    split_supports: bool = True,
     max_print_width: float = 240.0,
     max_print_depth: float = 210.0,
     allow_rotation: bool = True,
@@ -405,10 +364,6 @@ def build(
     rendered_lid = None
     if normalized_lid_style == "none":
         layout = None
-        breakaway_brace_top_z = _resolve_breakaway_brace_top_z(
-            box_top_z=rendered_box.val().BoundingBox().zmax,
-            lip_enabled=True,
-        )
         rendered_box = _apply_raised_floors(
             rendered_box,
             raised_floor_specs=raised_floor_specs,
@@ -456,7 +411,6 @@ def build(
             layout=layout,
             lid_text=normalized_lid_text,
         )
-        breakaway_brace_top_z = layout.channel_floor_z - BREAKAWAY_LIP_CLEARANCE_MM
 
     split_width_positions_u, split_depth_positions_u = _resolve_print_bed_splits(
         rendered_box,
@@ -477,13 +431,6 @@ def build(
         split_depth_positions_u=split_depth_positions_u,
         unit_width=unit_width,
         unit_depth=unit_depth,
-        unit_height=unit_height,
-        horizontal_specs=horizontal_specs,
-        vertical_specs=vertical_specs,
-        wall_thickness_mm=effective_wall_thickness_mm,
-        divider_thickness_mm=divider_thickness_mm,
-        breakaway_brace_top_z=breakaway_brace_top_z,
-        add_breakaway_braces=normalized_lid_style == "none" and split_supports,
     )
     naming_parameters = {
         "unit_width": unit_width,
@@ -523,15 +470,6 @@ def build(
         lid_text=normalized_lid_text,
         **naming_parameters,
     )
-
-
-def _resolve_breakaway_brace_top_z(*, box_top_z: float, lip_enabled: bool) -> float:
-    if not lip_enabled:
-        return box_top_z - BREAKAWAY_LIP_CLEARANCE_MM
-
-    from cqgridfinity import GR_LIP_H
-
-    return box_top_z - GR_LIP_H - BREAKAWAY_LIP_CLEARANCE_MM
 
 
 def _resolve_lid_style(lid_style: str) -> str:
@@ -1942,13 +1880,6 @@ def _split_rendered_box(
     split_depth_positions_u: tuple[float, ...],
     unit_width: int,
     unit_depth: int,
-    unit_height: int,
-    horizontal_specs: tuple[DividerSpec, ...],
-    vertical_specs: tuple[DividerSpec, ...],
-    wall_thickness_mm: float,
-    divider_thickness_mm: float,
-    breakaway_brace_top_z: float,
-    add_breakaway_braces: bool = True,
 ):
     if not split_width_positions_u and not split_depth_positions_u:
         return {"whole": rendered_box}
@@ -1968,40 +1899,17 @@ def _split_rendered_box(
         unit_count=unit_depth,
         split_positions_u=split_depth_positions_u,
     )
-    width_boundaries_u = (0.0, *split_width_positions_u, float(unit_width))
-    depth_boundaries_u = (0.0, *split_depth_positions_u, float(unit_depth))
-    if not add_breakaway_braces or unit_height <= BREAKAWAY_MAX_UNBRACED_HEIGHT_U:
-        width_braces = _empty_segment_breakaway_braces(split_width_positions_u)
-        depth_braces = _empty_segment_breakaway_braces(split_depth_positions_u)
-    else:
-        width_braces = _resolve_segment_breakaway_braces(
-            unit_count=unit_width,
-            split_positions_u=split_width_positions_u,
-            parallel_divider_specs=vertical_specs,
-            divider_full_span_axis_units=unit_depth,
-        )
-        depth_braces = _resolve_segment_breakaway_braces(
-            unit_count=unit_depth,
-            split_positions_u=split_depth_positions_u,
-            parallel_divider_specs=horizontal_specs,
-            divider_full_span_axis_units=unit_width,
-        )
 
     padding_mm = 2.0
     z_size = bounding_box.zlen + 2 * padding_mm
     z_center = bounding_box.zmin + bounding_box.zlen / 2.0
     parts = {}
 
-    for width_index, width_segment in enumerate(width_segments, start=1):
-        width_minimum, width_maximum = width_segment
-        width_minimum_u = width_boundaries_u[width_index - 1]
-        width_maximum_u = width_boundaries_u[width_index]
-        width_brace_sides = width_braces[width_index - 1]
-        for depth_index, depth_segment in enumerate(depth_segments, start=1):
-            depth_minimum, depth_maximum = depth_segment
-            depth_minimum_u = depth_boundaries_u[depth_index - 1]
-            depth_maximum_u = depth_boundaries_u[depth_index]
-            depth_brace_sides = depth_braces[depth_index - 1]
+    for width_index, (width_minimum, width_maximum) in enumerate(width_segments, start=1):
+        for depth_index, (depth_minimum, depth_maximum) in enumerate(
+            depth_segments,
+            start=1,
+        ):
             cutter = (
                 cq.Workplane("XY")
                 .box(
@@ -2017,91 +1925,13 @@ def _split_rendered_box(
                     )
                 )
             )
-            part = rendered_box.intersect(cutter)
-            if width_brace_sides.minimum_side:
-                part = _add_breakaway_brace_lattice(
-                    part,
-                    split_axis="width",
-                    split_coordinate=width_minimum,
-                    inside_direction=1,
-                    span_minimum=depth_minimum,
-                    span_maximum=depth_maximum,
-                    divider_center_coordinates=_crossing_divider_coordinates(
-                        split_position_u=width_minimum_u,
-                        perpendicular_divider_specs=horizontal_specs,
-                        position_axis_minimum=bounding_box.ymin,
-                        segment_span_minimum=depth_minimum,
-                        segment_span_maximum=depth_maximum,
-                        wall_thickness_mm=wall_thickness_mm,
-                    ),
-                    divider_thickness_mm=divider_thickness_mm,
-                    brace_top_z=breakaway_brace_top_z,
-                )
-            if width_brace_sides.maximum_side:
-                part = _add_breakaway_brace_lattice(
-                    part,
-                    split_axis="width",
-                    split_coordinate=width_maximum,
-                    inside_direction=-1,
-                    span_minimum=depth_minimum,
-                    span_maximum=depth_maximum,
-                    divider_center_coordinates=_crossing_divider_coordinates(
-                        split_position_u=width_maximum_u,
-                        perpendicular_divider_specs=horizontal_specs,
-                        position_axis_minimum=bounding_box.ymin,
-                        segment_span_minimum=depth_minimum,
-                        segment_span_maximum=depth_maximum,
-                        wall_thickness_mm=wall_thickness_mm,
-                    ),
-                    divider_thickness_mm=divider_thickness_mm,
-                    brace_top_z=breakaway_brace_top_z,
-                )
-            if depth_brace_sides.minimum_side:
-                part = _add_breakaway_brace_lattice(
-                    part,
-                    split_axis="depth",
-                    split_coordinate=depth_minimum,
-                    inside_direction=1,
-                    span_minimum=width_minimum,
-                    span_maximum=width_maximum,
-                    divider_center_coordinates=_crossing_divider_coordinates(
-                        split_position_u=depth_minimum_u,
-                        perpendicular_divider_specs=vertical_specs,
-                        position_axis_minimum=bounding_box.xmin,
-                        segment_span_minimum=width_minimum,
-                        segment_span_maximum=width_maximum,
-                        wall_thickness_mm=wall_thickness_mm,
-                    ),
-                    divider_thickness_mm=divider_thickness_mm,
-                    brace_top_z=breakaway_brace_top_z,
-                )
-            if depth_brace_sides.maximum_side:
-                part = _add_breakaway_brace_lattice(
-                    part,
-                    split_axis="depth",
-                    split_coordinate=depth_maximum,
-                    inside_direction=-1,
-                    span_minimum=width_minimum,
-                    span_maximum=width_maximum,
-                    divider_center_coordinates=_crossing_divider_coordinates(
-                        split_position_u=depth_maximum_u,
-                        perpendicular_divider_specs=vertical_specs,
-                        position_axis_minimum=bounding_box.xmin,
-                        segment_span_minimum=width_minimum,
-                        segment_span_maximum=width_maximum,
-                        wall_thickness_mm=wall_thickness_mm,
-                    ),
-                    divider_thickness_mm=divider_thickness_mm,
-                    brace_top_z=breakaway_brace_top_z,
-                )
-
             part_name = _split_part_name(
                 width_index=width_index,
                 width_count=len(width_segments),
                 depth_index=depth_index,
                 depth_count=len(depth_segments),
             )
-            parts[part_name] = part
+            parts[part_name] = rendered_box.intersect(cutter)
 
     return parts
 
@@ -2169,251 +1999,6 @@ def _split_rendered_lid(
                 )
             parts[part_name] = part
     return parts
-
-
-def _crossing_divider_coordinates(
-    *,
-    split_position_u: float,
-    perpendicular_divider_specs: tuple[DividerSpec, ...],
-    position_axis_minimum: float,
-    segment_span_minimum: float,
-    segment_span_maximum: float,
-    wall_thickness_mm: float,
-) -> tuple[float, ...]:
-    tolerance_u = POSITION_TOLERANCE_MM / GRID_UNIT_MM
-    coordinates = {
-        position_axis_minimum + wall_thickness_mm + divider_spec.position_u * GRID_UNIT_MM
-        for divider_spec in perpendicular_divider_specs
-        if divider_spec.span_start_u - tolerance_u
-        <= split_position_u
-        <= divider_spec.span_end_u + tolerance_u
-    }
-    return tuple(
-        coordinate
-        for coordinate in sorted(coordinates)
-        if segment_span_minimum - POSITION_TOLERANCE_MM
-        <= coordinate
-        <= segment_span_maximum + POSITION_TOLERANCE_MM
-    )
-
-
-def _empty_segment_breakaway_braces(
-    split_positions_u: tuple[float, ...],
-) -> tuple[SegmentBreakawayBraces, ...]:
-    return tuple(
-        SegmentBreakawayBraces(minimum_side=False, maximum_side=False)
-        for _ in range(len(split_positions_u) + 1)
-    )
-
-
-def _resolve_segment_breakaway_braces(
-    *,
-    unit_count: int,
-    split_positions_u: tuple[float, ...],
-    parallel_divider_specs: tuple[DividerSpec, ...],
-    divider_full_span_axis_units: int,
-) -> tuple[SegmentBreakawayBraces, ...]:
-    unit_boundaries = (0.0, *split_positions_u, float(unit_count))
-    segment_count = len(unit_boundaries) - 1
-    segment_braces = []
-
-    for segment_index, (segment_minimum_u, segment_maximum_u) in enumerate(
-        zip(unit_boundaries, unit_boundaries[1:], strict=False)
-    ):
-        minimum_side = segment_index > 0 and not _has_nearby_supporting_divider(
-            split_position_u=segment_minimum_u,
-            segment_minimum_u=segment_minimum_u,
-            segment_maximum_u=segment_maximum_u,
-            parallel_divider_specs=parallel_divider_specs,
-            divider_full_span_axis_units=divider_full_span_axis_units,
-        )
-        maximum_side = segment_index < segment_count - 1 and not _has_nearby_supporting_divider(
-            split_position_u=segment_maximum_u,
-            segment_minimum_u=segment_minimum_u,
-            segment_maximum_u=segment_maximum_u,
-            parallel_divider_specs=parallel_divider_specs,
-            divider_full_span_axis_units=divider_full_span_axis_units,
-        )
-        segment_braces.append(
-            SegmentBreakawayBraces(
-                minimum_side=minimum_side,
-                maximum_side=maximum_side,
-            )
-        )
-
-    return tuple(segment_braces)
-
-
-def _has_nearby_supporting_divider(
-    *,
-    split_position_u: float,
-    segment_minimum_u: float,
-    segment_maximum_u: float,
-    parallel_divider_specs: tuple[DividerSpec, ...],
-    divider_full_span_axis_units: int,
-) -> bool:
-    tolerance_u = POSITION_TOLERANCE_MM / GRID_UNIT_MM
-    return any(
-        _is_full_span(divider_spec, divider_full_span_axis_units)
-        and segment_minimum_u - tolerance_u
-        <= divider_spec.position_u
-        <= segment_maximum_u + tolerance_u
-        and abs(divider_spec.position_u - split_position_u)
-        <= BREAKAWAY_DIVIDER_DISTANCE_U + tolerance_u
-        for divider_spec in parallel_divider_specs
-    )
-
-
-def _breakaway_brace_profile() -> BreakawayBraceProfile:
-    return BreakawayBraceProfile(
-        thickness_mm=BREAKAWAY_BRACE_THICKNESS_MM,
-        crossbar_height_mm=BREAKAWAY_CROSSBAR_HEIGHT_MM,
-        support_width_mm=BREAKAWAY_SUPPORT_WIDTH_MM,
-        crossbar_height_ratios=tuple(
-            index / BREAKAWAY_CROSSBAR_COUNT for index in range(1, BREAKAWAY_CROSSBAR_COUNT + 1)
-        ),
-    )
-
-
-def _brace_open_spans(
-    *,
-    span_minimum: float,
-    span_maximum: float,
-    divider_center_coordinates: tuple[float, ...],
-    divider_thickness_mm: float,
-) -> tuple[tuple[float, float], ...]:
-    divider_half_thickness = divider_thickness_mm / 2.0
-    blocked_spans = sorted(
-        (
-            max(span_minimum, coordinate - divider_half_thickness),
-            min(span_maximum, coordinate + divider_half_thickness),
-        )
-        for coordinate in divider_center_coordinates
-        if coordinate + divider_half_thickness > span_minimum
-        and coordinate - divider_half_thickness < span_maximum
-    )
-    open_spans = []
-    cursor = span_minimum
-    for blocked_minimum, blocked_maximum in blocked_spans:
-        if blocked_minimum > cursor + POSITION_TOLERANCE_MM:
-            open_spans.append((cursor, blocked_minimum))
-        cursor = max(cursor, blocked_maximum)
-    if cursor < span_maximum - POSITION_TOLERANCE_MM:
-        open_spans.append((cursor, span_maximum))
-    return tuple(open_spans)
-
-
-def _distributed_support_centers(
-    open_spans: tuple[tuple[float, float], ...],
-) -> tuple[float, ...]:
-    centers = []
-    for span_minimum, span_maximum in open_spans:
-        span_length = span_maximum - span_minimum
-        bridge_count = max(1, math.ceil(span_length / BREAKAWAY_MAX_BRIDGE_MM))
-        centers.extend(
-            span_minimum + span_length * support_index / bridge_count
-            for support_index in range(1, bridge_count)
-        )
-    return tuple(centers)
-
-
-def _add_breakaway_brace_lattice(
-    part,
-    *,
-    split_axis: str,
-    split_coordinate: float,
-    inside_direction: int,
-    span_minimum: float,
-    span_maximum: float,
-    divider_center_coordinates: tuple[float, ...],
-    divider_thickness_mm: float,
-    brace_top_z: float,
-):
-    import cadquery as cq
-    from cqgridfinity import GR_BASE_HEIGHT, GR_FLOOR
-
-    floor_top_z = GR_BASE_HEIGHT + GR_FLOOR
-    profile = _breakaway_brace_profile()
-    crossbar_center_height = brace_top_z - floor_top_z - profile.crossbar_height_mm / 2.0
-    if crossbar_center_height <= 0:
-        return part
-
-    crossbar_centers_z = tuple(
-        floor_top_z + crossbar_center_height * ratio for ratio in profile.crossbar_height_ratios
-    )
-    open_spans = _brace_open_spans(
-        span_minimum=span_minimum,
-        span_maximum=span_maximum,
-        divider_center_coordinates=divider_center_coordinates,
-        divider_thickness_mm=divider_thickness_mm,
-    )
-    normal_center = split_coordinate + inside_direction * profile.thickness_mm / 2.0
-    brace = None
-
-    for crossbar_center_z in crossbar_centers_z:
-        for open_span_minimum, open_span_maximum in open_spans:
-            span_length = open_span_maximum - open_span_minimum
-            span_center = open_span_minimum + span_length / 2.0
-            if split_axis == "width":
-                crossbar = (
-                    cq.Workplane("XY")
-                    .box(
-                        profile.thickness_mm,
-                        span_length,
-                        profile.crossbar_height_mm,
-                    )
-                    .translate((normal_center, span_center, crossbar_center_z))
-                )
-            else:
-                crossbar = (
-                    cq.Workplane("XY")
-                    .box(
-                        span_length,
-                        profile.thickness_mm,
-                        profile.crossbar_height_mm,
-                    )
-                    .translate((span_center, normal_center, crossbar_center_z))
-                )
-            brace = crossbar if brace is None else brace.union(crossbar)
-
-    support_bottom_z = floor_top_z - profile.thickness_mm
-    support_height = brace_top_z - support_bottom_z
-    for support_span_center in _distributed_support_centers(open_spans):
-        if split_axis == "width":
-            support = (
-                cq.Workplane("XY")
-                .box(
-                    profile.thickness_mm,
-                    profile.support_width_mm,
-                    support_height,
-                )
-                .translate(
-                    (
-                        normal_center,
-                        support_span_center,
-                        support_bottom_z + support_height / 2.0,
-                    )
-                )
-            )
-        else:
-            support = (
-                cq.Workplane("XY")
-                .box(
-                    profile.support_width_mm,
-                    profile.thickness_mm,
-                    support_height,
-                )
-                .translate(
-                    (
-                        support_span_center,
-                        normal_center,
-                        support_bottom_z + support_height / 2.0,
-                    )
-                )
-            )
-        brace = support if brace is None else brace.union(support)
-
-    return part if brace is None else part.union(brace)
 
 
 def _axis_split_coordinates(
