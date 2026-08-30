@@ -155,7 +155,7 @@ Model conventions:
 - `monopoly_deal_storage_box`: editable CadQuery rebuild for a Monopoly Deal sliding deck box.
 - `gridfinity_box`: Gridfinity storage box with a stacking lip or an opt-in matching
   dovetail lid (`lid_style=ziplock|wrap`), no magnet/screw holes, optional 0.4 mm raised
-  `lid_text`, scoops, decimal-unit dividers, raised floors, and automatic Gridfinity-boundary
+  `lid_text`, scoops, solid filled mode (`solid=true`), decimal-unit dividers, raised floors, and automatic Gridfinity-boundary
   splitting for oversized boxes (default safe area: 240 x 210 mm for a Prusa CORE One+).
   Dovetail modes use a hole-free, lipless reference body with a 2.4 mm minimum wall,
   7.4 mm interior floor, and 7 mm per height unit. The short-box minimum preserves at

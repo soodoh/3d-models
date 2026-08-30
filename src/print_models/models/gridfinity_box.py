@@ -10,7 +10,8 @@ from print_models.dovetail import trapezoidal_panel
 NAME = "gridfinity_box"
 DESCRIPTION = (
     "Gridfinity storage box with a stacking lip or optional matching dovetail lid, solid "
-    "no-hole bottom, customizable lid text, fractional dividers, and print-bed-aware splitting."
+    "filled or hollow interior, no-hole bottom, customizable lid text, fractional dividers, "
+    "and print-bed-aware splitting."
 )
 PARAMETERS = {
     "unit_width": 5,
@@ -26,6 +27,7 @@ PARAMETERS = {
     "allow_rotation": True,
     "raised_floors": "",
     "scoops": False,
+    "solid": False,
     "wall_thickness_mm": 1.0,
     "divider_thickness_mm": 1.2,
     "lid_style": "none",
@@ -40,8 +42,9 @@ PRINT_NOTES = (
     "depth. Positions and spans may be decimal units. Boxes are automatically split on "
     "Gridfinity unit boundaries when they exceed the default 240 x 210 mm safe print area "
     "for a Prusa CORE One+. Set auto_split=false to disable this, or provide explicit "
-    "split positions to control either axis. Split parts are exact clips of the modeled box "
-    "and never include generated lattice supports. Raised floor specs use "
+    "split positions to control either axis. Set solid=true to fill the box interior completely "
+    "while retaining the stacking lip. Split parts are exact clips of the modeled box and never "
+    "include generated lattice supports. Raised floor specs use "
     "x_start-x_end@y_start-y_end:height_mm. Set "
     "lid_style=ziplock or lid_style=wrap to use the hole-free reference body with a 2.4 mm "
     "minimum wall, 7.4 mm floor, low-coordinate profiled stop, and high-coordinate open "
@@ -155,6 +158,7 @@ class FractionalDividerGridfinityBox:
         divider_thickness_mm: float,
         scoops: bool,
         lip_enabled: bool,
+        solid: bool = False,
     ) -> None:
         from cqgridfinity import GridfinityBox
 
@@ -246,6 +250,7 @@ class FractionalDividerGridfinityBox:
             unit_depth,
             unit_height,
             holes=False,
+            solid=solid,
             scoops=scoops,
             labels=False,
             no_lip=not lip_enabled,
@@ -296,12 +301,16 @@ def build(
     allow_rotation: bool = True,
     raised_floors: str | Sequence[RaisedFloorSpec] = "",
     scoops: bool = False,
+    solid: bool = False,
     wall_thickness_mm: float = 1.0,
     divider_thickness_mm: float = 1.2,
     lid_style: str = "none",
     lid_text: str = "",
 ):
-    """Build a Gridfinity storage box with optional custom dividers."""
+    """Build a Gridfinity storage box with optional custom dividers.
+
+    Set solid=True to fill the box interior completely while retaining the stacking lip.
+    """
     _validate_unit_count("unit_width", unit_width)
     _validate_unit_count("unit_depth", unit_depth)
     _validate_unit_count("unit_height", unit_height)
@@ -311,6 +320,8 @@ def build(
     _validate_positive("divider_thickness_mm", divider_thickness_mm)
     normalized_lid_style = _resolve_lid_style(lid_style)
     normalized_lid_text = _resolve_lid_text(lid_text, lid_style=normalized_lid_style)
+    if solid and normalized_lid_style != "none":
+        raise ValueError("solid boxes require lid_style=none.")
     effective_wall_thickness_mm = (
         wall_thickness_mm
         if normalized_lid_style == "none"
@@ -358,6 +369,7 @@ def build(
         wall_thickness_mm=effective_wall_thickness_mm,
         divider_thickness_mm=divider_thickness_mm,
         scoops=scoops,
+        solid=solid,
         lip_enabled=normalized_lid_style == "none",
     )
     rendered_box = box.render()
@@ -442,6 +454,7 @@ def build(
         "split_depth_positions_u": split_depth_positions_u,
         "raised_floor_specs": raised_floor_specs,
         "scoops": scoops,
+        "solid": solid,
     }
     if rendered_lid is None:
         return _named_export_parts(box_parts, **naming_parameters)
@@ -1559,6 +1572,7 @@ def _named_export_parts(
     split_depth_positions_u: tuple[float, ...],
     raised_floor_specs: tuple[RaisedFloorSpec, ...],
     scoops: bool,
+    solid: bool,
 ) -> dict[str, object]:
     base_name = _export_base_name(
         unit_width=unit_width,
@@ -1570,6 +1584,7 @@ def _named_export_parts(
         split_depth_positions_u=split_depth_positions_u,
         raised_floor_specs=raised_floor_specs,
         scoops=scoops,
+        solid=solid,
     )
 
     if set(parts) == {"whole"}:
@@ -1593,6 +1608,7 @@ def _named_dovetail_export_parts(
     split_depth_positions_u: tuple[float, ...],
     raised_floor_specs: tuple[RaisedFloorSpec, ...],
     scoops: bool,
+    solid: bool,
 ) -> dict[str, object]:
     base_name = _export_base_name(
         unit_width=unit_width,
@@ -1604,6 +1620,7 @@ def _named_dovetail_export_parts(
         split_depth_positions_u=split_depth_positions_u,
         raised_floor_specs=raised_floor_specs,
         scoops=scoops,
+        solid=solid,
     )
     named_parts = {}
     label_suffix = f"_lid_text_{_format_lid_text(lid_text)}" if lid_text else ""
@@ -1629,6 +1646,7 @@ def _export_base_name(
     split_depth_positions_u: tuple[float, ...],
     raised_floor_specs: tuple[RaisedFloorSpec, ...],
     scoops: bool,
+    solid: bool,
 ) -> str:
     name_parts = [f"{unit_width}x{unit_depth}x{unit_height}u"]
 
@@ -1646,6 +1664,8 @@ def _export_base_name(
         name_parts.append(f"raised_floors_{_format_raised_floor_specs(raised_floor_specs)}")
     if scoops:
         name_parts.append("scoops")
+    if solid:
+        name_parts.append("solid")
 
     return "_".join(name_parts)
 
