@@ -77,11 +77,24 @@ MODEL=gridfinity_shims
 
 ## Validation expectations
 
-- Run the full `unittest` suite after Python changes.
-- For every changed model, run `.venv/bin/python preview.py "$MODEL" --no-preview` with representative parameters and review bounding box, extents, volume, area, and center of mass for plausibility.
-- Render relevant orthographic and isometric previews for geometry changes; inspect critical clearances, wall thicknesses, orientation, mating parts, and split interfaces.
-- Export the final candidate explicitly as STL only.
-- When matching a reference STL, follow `docs/stl_validation.md`; compare coordinate frames and scalar geometry before bidirectional surface distances, and never rely on a one-sided distance alone.
+- Match validation effort to the change scope; generating an artifact is not itself a source-code change.
+- **Export-only request:** when the task only exports an existing model and makes no relevant source, dependency, or environment changes, run the explicit STL export and inspect the output directory. Do not run tests, geometry inspection, preview rendering, or baseline-mesh comparison unless the user requests them.
+- **Existing code with new parameters:** export the requested STL. Use geometry inspection or a preview only for novel or edge-case parameter combinations where dimensions or printability need a sanity check; do not run the full test suite.
+- **Model-specific Python change:** run the corresponding focused test module. Inspect representative geometry, render relevant orthographic/isometric previews, and export the final STL in one `preview.py` invocation when possible so CadQuery builds the model only once:
+
+```bash
+.venv/bin/python -m unittest tests.test_gridfinity_box
+.venv/bin/python preview.py "$MODEL" \
+  --views isometric,top,front,right \
+  --export stl \
+  --export-dir build
+```
+
+- Review the combined command's bounding box, extents, volume, area, center of mass, critical clearances, wall thicknesses, orientation, mating parts, and split interfaces as applicable. Do not repeat separate inspect, preview, and export builds after an equivalent combined run succeeds.
+- **Shared or cross-model Python change:** run the full `unittest` suite when changing shared CAD helpers, CLI/export/filename behavior, catalog machinery, or behavior affecting multiple models. A model-only implementation or registration entry does not by itself require the full suite.
+- After Python source or test changes, run Ruff lint and format checks in addition to the appropriately scoped tests.
+- Export final model deliverables explicitly as STL only.
+- Run reference-STL validation only when the task is matching a reference mesh or its acceptance criteria require mesh fidelity. Follow `docs/stl_validation.md`; compare coordinate frames and scalar geometry before bidirectional surface distances, and never rely on a one-sided distance alone.
 - If a required check cannot run, report the exact command and reason rather than claiming validation succeeded.
 
 ## Change boundaries
