@@ -13,6 +13,7 @@ MODEL_MODULES = (
     "print_models.models.platypus_quickdraw_backflush_adapter",
     "print_models.models.gridfinity_box",
     "print_models.models.gridfinity_irregular_box",
+    "print_models.models.gridfinity_sloped_tray",
     "print_models.models.gridfinity_cup_holder",
     "print_models.models.gridfinity_spice_jar_holder",
     "print_models.models.gridfinity_whiskey_snifter",
