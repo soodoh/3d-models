@@ -16,6 +16,7 @@ MODEL_MODULES = (
     "print_models.models.gridfinity_sloped_tray",
     "print_models.models.gridfinity_cup_holder",
     "print_models.models.gridfinity_spice_jar_holder",
+    "print_models.models.gridfinity_spice_combo_holder",
     "print_models.models.gridfinity_whiskey_snifter",
     "print_models.models.gridfinity_small_snifter",
     "print_models.models.gridfinity_double_jigger",
