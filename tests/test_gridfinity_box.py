@@ -97,6 +97,30 @@ class DovetailLidPolicyTests(unittest.TestCase):
             self.assertAlmostEqual(bounding_box.zlen, 24.8)
             self.assertAlmostEqual(part.val().Volume(), 14436.019618066, places=6)
 
+    def test_stackable_lip_defaults_true_and_can_be_disabled(self) -> None:
+        self.assertIs(gridfinity_box.PARAMETERS["stackable_lip"], True)
+        default_result = gridfinity_box.build(
+            unit_width=1,
+            unit_depth=1,
+            unit_height=3,
+            auto_split=False,
+        )
+        lipless_result = gridfinity_box.build(
+            unit_width=1,
+            unit_depth=1,
+            unit_height=3,
+            auto_split=False,
+            stackable_lip=False,
+        )
+
+        self.assertEqual(tuple(default_result), ("1x1x3u",))
+        self.assertEqual(tuple(lipless_result), ("1x1x3u_no_stackable_lip",))
+        default_part = default_result["1x1x3u"]
+        lipless_part = lipless_result["1x1x3u_no_stackable_lip"]
+        self.assertTrue(lipless_part.val().isValid())
+        self.assertEqual(len(lipless_part.solids().vals()), 1)
+        self.assertLess(lipless_part.val().Volume(), default_part.val().Volume())
+
     def test_selects_longest_slide_axis_and_depth_on_ties(self) -> None:
         import cadquery as cq
 
