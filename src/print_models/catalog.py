@@ -24,6 +24,8 @@ MODEL_MODULES = (
     "print_models.models.gridfinity_tea_cup",
     "print_models.models.gridfinity_shot_glass",
     "print_models.models.gridfinity_oxo_cocktail_strainer",
+    "print_models.models.gridfinity_oxo_ice_cream_scoop",
+    "print_models.models.gridfinity_oxo_ice_cream_scoop_fit_test",
     "print_models.models.gridfinity_large_strainer",
     "print_models.models.gridfinity_hawthorne_strainer",
     "print_models.models.gridfinity_silverware_set",
