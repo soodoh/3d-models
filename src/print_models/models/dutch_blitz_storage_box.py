@@ -1,4 +1,4 @@
-"""Parametric CadQuery rebuild of the Dutch Blitz card storage box."""
+"""Compact parametric Dutch Blitz card storage box with four shared-rib pockets."""
 
 from __future__ import annotations
 
@@ -10,13 +10,23 @@ from print_models.dovetail import trapezoidal_panel
 
 NAME = "dutch_blitz_storage_box"
 DESCRIPTION = (
-    "Parametric CadQuery Dutch Blitz card storage box with editable lid fit and logo sizing."
+    "Compact four-deck Dutch Blitz storage box with shared ribs, sliding locking lid, "
+    "and engraved branding."
 )
+
+# Pocket measurements taken from Steve's Dutch Blitz Card Holder Insert (Printables 177150).
+# Its STL measures 84.0 x 122.8 x 28.8 mm. The 2.0 mm floor leaves 82.0 mm of held card
+# length, while each pocket provides 58.4 mm of card width and 12.6 mm per deck.
+_SOURCE_CARD_LENGTH = 82.0
+_SOURCE_CARD_POCKET_WIDTH = 58.4
+_SOURCE_DECK_POCKET_THICKNESS = 12.6
+
 PARAMETERS = {
     "part": "all",
-    "outer_width": 123.0,
-    "outer_depth": 66.0,
-    "outer_height": 92.0,
+    "card_length": _SOURCE_CARD_LENGTH,
+    "card_width": _SOURCE_CARD_POCKET_WIDTH,
+    "deck_thickness": _SOURCE_DECK_POCKET_THICKNESS,
+    "card_length_clearance": 2.0,
     "wall_thickness": 4.0,
     "bottom_thickness": 4.0,
     "corner_radius": 1.0,
@@ -24,11 +34,11 @@ PARAMETERS = {
     "lid_depth_fit_clearance": 2.089892,
     "lid_thickness": 3.076608,
     "lid_edge_chamfer": 0.8,
-    "logo_size": 40.66,
-    "logo_width": 63.95,
+    "logo_size": 32.0,
+    "logo_width": 50.0,
     "logo_depth": 0.8,
-    "side_logo_size": 58.0,
-    "side_logo_width": 95.0,
+    "side_logo_size": 40.0,
+    "side_logo_width": 52.0,
     "side_logo_depth": 0.8,
     "slogan_size": 10.0,
     "slogan_depth": 0.8,
@@ -36,13 +46,12 @@ PARAMETERS = {
     "handle_slot_depth": 2.0,
     "click_feature": True,
     "divider_count": 4,
-    "divider_depth": 52.0,
+    "divider_thickness": 1.6,
     "divider_height": 70.4,
-    "divider_bottom_width": 12.5,
-    "divider_pitch": 25.5,
 }
 PRINT_NOTES = (
-    "Print the container upright and the lid flat. Tune lid_fit_clearance by printer/material; "
+    "Print the container upright and the lid flat. Card-pocket width and deck thickness are "
+    "measured from Printables model 177150. Tune lid_fit_clearance by printer/material; "
     "increase it for a looser sliding fit or decrease it for a tighter lid."
 )
 
@@ -57,9 +66,10 @@ _PART_ALIASES = {
 
 def build(
     part: str = "all",
-    outer_width: float = 123.0,
-    outer_depth: float = 66.0,
-    outer_height: float = 92.0,
+    card_length: float = _SOURCE_CARD_LENGTH,
+    card_width: float = _SOURCE_CARD_POCKET_WIDTH,
+    deck_thickness: float = _SOURCE_DECK_POCKET_THICKNESS,
+    card_length_clearance: float = 2.0,
     wall_thickness: float = 4.0,
     bottom_thickness: float = 4.0,
     corner_radius: float = 1.0,
@@ -67,11 +77,11 @@ def build(
     lid_depth_fit_clearance: float = 2.089892,
     lid_thickness: float = 3.076608,
     lid_edge_chamfer: float = 0.8,
-    logo_size: float = 40.66,
-    logo_width: float = 63.95,
+    logo_size: float = 32.0,
+    logo_width: float = 50.0,
     logo_depth: float = 0.8,
-    side_logo_size: float = 58.0,
-    side_logo_width: float = 95.0,
+    side_logo_size: float = 40.0,
+    side_logo_width: float = 52.0,
     side_logo_depth: float = 0.8,
     slogan_size: float = 10.0,
     slogan_depth: float = 0.8,
@@ -79,31 +89,50 @@ def build(
     handle_slot_depth: float = 2.0,
     click_feature: bool = True,
     divider_count: int = 4,
-    divider_depth: float = 52.0,
+    divider_thickness: float = 1.6,
     divider_height: float = 70.4,
-    divider_bottom_width: float = 12.5,
-    divider_pitch: float = 25.5,
 ) -> Mapping[str, object]:
-    """Build one or both parametric parts."""
+    """Build one or both compact parametric parts."""
     import cadquery as cq
 
     normalized_part = _normalize_part(part)
-    results: dict[str, object] = {}
+    _validate_dimensions(
+        card_length=card_length,
+        card_width=card_width,
+        deck_thickness=deck_thickness,
+        card_length_clearance=card_length_clearance,
+        wall_thickness=wall_thickness,
+        bottom_thickness=bottom_thickness,
+        corner_radius=corner_radius,
+        lid_fit_clearance=lid_fit_clearance,
+        lid_depth_fit_clearance=lid_depth_fit_clearance,
+        lid_thickness=lid_thickness,
+        divider_count=divider_count,
+        divider_thickness=divider_thickness,
+        divider_height=divider_height,
+    )
 
+    interior_width = divider_count * deck_thickness + (divider_count - 1) * divider_thickness
+    outer_width = interior_width + 2.0 * wall_thickness
+    outer_depth = card_width + 2.0 * wall_thickness
+    outer_height = bottom_thickness + card_length + card_length_clearance + lid_thickness
+
+    results: dict[str, object] = {}
     if normalized_part in {"all", "container"}:
         results["container"] = _build_container(
             cq=cq,
             outer_width=outer_width,
             outer_depth=outer_depth,
             outer_height=outer_height,
+            interior_width=interior_width,
+            card_width=card_width,
+            deck_thickness=deck_thickness,
             wall_thickness=wall_thickness,
             bottom_thickness=bottom_thickness,
             corner_radius=corner_radius,
             divider_count=divider_count,
-            divider_depth=divider_depth,
+            divider_thickness=divider_thickness,
             divider_height=divider_height,
-            divider_bottom_width=divider_bottom_width,
-            divider_pitch=divider_pitch,
             click_feature=click_feature,
             lid_thickness=lid_thickness,
             side_logo_size=side_logo_size,
@@ -118,6 +147,7 @@ def build(
             cq=cq,
             outer_width=outer_width,
             outer_depth=outer_depth,
+            wall_thickness=wall_thickness,
             lid_fit_clearance=lid_fit_clearance,
             lid_depth_fit_clearance=lid_depth_fit_clearance,
             lid_thickness=lid_thickness,
@@ -143,12 +173,65 @@ def _normalize_part(part: str) -> str:
         raise ValueError(f"part must be one of: {choices}") from error
 
 
+def _validate_dimensions(
+    *,
+    card_length: float,
+    card_width: float,
+    deck_thickness: float,
+    card_length_clearance: float,
+    wall_thickness: float,
+    bottom_thickness: float,
+    corner_radius: float,
+    lid_fit_clearance: float,
+    lid_depth_fit_clearance: float,
+    lid_thickness: float,
+    divider_count: int,
+    divider_thickness: float,
+    divider_height: float,
+) -> None:
+    positive_dimensions = {
+        "card_length": card_length,
+        "card_width": card_width,
+        "deck_thickness": deck_thickness,
+        "wall_thickness": wall_thickness,
+        "bottom_thickness": bottom_thickness,
+        "lid_thickness": lid_thickness,
+        "divider_thickness": divider_thickness,
+        "divider_height": divider_height,
+    }
+    for name, value in positive_dimensions.items():
+        if value <= 0:
+            raise ValueError(f"{name} must be positive")
+
+    non_negative_dimensions = {
+        "card_length_clearance": card_length_clearance,
+        "corner_radius": corner_radius,
+        "lid_fit_clearance": lid_fit_clearance,
+        "lid_depth_fit_clearance": lid_depth_fit_clearance,
+    }
+    for name, value in non_negative_dimensions.items():
+        if value < 0:
+            raise ValueError(f"{name} must not be negative")
+
+    if isinstance(divider_count, bool) or not isinstance(divider_count, int) or divider_count < 1:
+        raise ValueError("divider_count must be a positive integer")
+    if wall_thickness < 3.0:
+        raise ValueError("wall_thickness must be at least 3.0 mm for the sliding lid tracks")
+
+    lid_bottom = bottom_thickness + card_length + card_length_clearance
+    if not bottom_thickness < divider_height < lid_bottom:
+        raise ValueError("divider_height must be above the floor and below the lid")
+
+
 def _build_container(
     *,
     cq,
     outer_width: float,
     outer_depth: float,
     outer_height: float,
+    interior_width: float,
+    card_width: float,
+    deck_thickness: float,
     wall_thickness: float,
     bottom_thickness: float,
     corner_radius: float,
@@ -160,35 +243,30 @@ def _build_container(
     slogan_size: float,
     slogan_depth: float,
     divider_count: int,
-    divider_depth: float,
+    divider_thickness: float,
     divider_height: float,
-    divider_bottom_width: float,
-    divider_pitch: float,
 ):
     body = _rounded_prism(cq, outer_width, outer_depth, outer_height, corner_radius)
     body = body.cut(
         _upper_opening_cut(
             cq=cq,
-            width=outer_width - 8.0,
-            depth=outer_depth - 8.0,
-            z_min=divider_height,
+            width=interior_width,
+            depth=card_width,
+            z_min=bottom_thickness,
             z_max=outer_height + 1.0,
         )
     )
 
-    slot_start = -divider_pitch * (divider_count - 1) / 2.0
-    for index in range(divider_count):
-        center = slot_start + index * divider_pitch
-        body = body.cut(
-            _card_slot_cut(
-                cq=cq,
-                center=center,
-                bottom_width=divider_bottom_width,
-                bottom_depth=divider_depth,
-                z_min=bottom_thickness,
-                z_max=divider_height,
-            )
+    rib_height = divider_height - bottom_thickness
+    first_rib_x = -interior_width / 2.0 + deck_thickness + divider_thickness / 2.0
+    for index in range(divider_count - 1):
+        center_x = first_rib_x + index * (deck_thickness + divider_thickness)
+        rib = (
+            cq.Workplane("XY")
+            .box(divider_thickness, card_width, rib_height)
+            .translate((center_x, 0.0, bottom_thickness + rib_height / 2.0))
         )
+        body = body.union(rib)
 
     if side_logo_depth > 0 and side_logo_size > 0:
         body = _engrave_container_side_logos(
@@ -214,19 +292,21 @@ def _build_container(
     if click_feature:
         track_z = outer_height - lid_thickness - 0.2
         body = body.cut(
-            _side_dovetail_track_cuts(
+            _front_dovetail_track_cuts(
                 cq=cq,
                 outer_width=outer_width,
+                outer_depth=outer_depth,
                 wall_thickness=wall_thickness,
                 outer_height=outer_height,
                 track_z=track_z,
             )
         )
         body = body.cut(
-            _right_lid_track_cut(
+            _front_lid_track_cut(
                 cq=cq,
                 outer_width=outer_width,
                 outer_depth=outer_depth,
+                wall_thickness=wall_thickness,
                 outer_height=outer_height,
                 track_z=track_z,
             )
@@ -236,6 +316,7 @@ def _build_container(
                 cq=cq,
                 outer_width=outer_width,
                 outer_depth=outer_depth,
+                wall_thickness=wall_thickness,
                 track_z=track_z,
             )
         )
@@ -248,6 +329,7 @@ def _build_lid(
     cq,
     outer_width: float,
     outer_depth: float,
+    wall_thickness: float,
     lid_fit_clearance: float,
     lid_depth_fit_clearance: float,
     lid_thickness: float,
@@ -265,7 +347,7 @@ def _build_lid(
 
     if lid_edge_chamfer > 0:
         try:
-            lid = lid.edges("|Y").chamfer(min(lid_edge_chamfer, lid_thickness / 3.0))
+            lid = lid.edges("|X").chamfer(min(lid_edge_chamfer, lid_thickness / 3.0))
         except Exception:
             pass
 
@@ -280,23 +362,18 @@ def _build_lid(
         )
 
     if handle_slot and handle_slot_depth > 0:
-        slot_center_x = lid_width / 2.0 - 7.5
+        slot_center_y = -lid_depth / 2.0 + 7.0
         lid = (
             lid.faces(">Z")
             .workplane()
-            .center(slot_center_x, 0.0)
-            .slot2D(25.0, 5.0, angle=90.0)
+            .center(0.0, slot_center_y)
+            .slot2D(25.0, 5.0)
             .cutBlind(-min(handle_slot_depth, lid_thickness - 0.4))
         )
 
     if click_feature:
-        groove_center_x = lid_width / 2.0 - 2.0
-        groove = (
-            cq.Workplane("XY")
-            .center(groove_center_x, 0.0)
-            .slot2D(10.2, 2.0, angle=90.0)
-            .extrude(0.8)
-        )
+        groove_center_y = -lid_depth / 2.0 + wall_thickness / 2.0
+        groove = cq.Workplane("XY").center(0.0, groove_center_y).slot2D(10.2, 2.0).extrude(0.8)
         lid = lid.cut(groove)
 
     return lid.clean()
@@ -305,11 +382,11 @@ def _build_lid(
 def _lid_dovetail_blank(cq, width: float, bottom_depth: float, height: float):
     return trapezoidal_panel(
         cq,
-        length=width,
-        bottom_width=bottom_depth,
+        length=bottom_depth,
+        bottom_width=width,
         height=height,
         side_inset=2.154108,
-        extrusion_axis="x",
+        extrusion_axis="y",
     )
 
 
@@ -327,135 +404,106 @@ def _upper_opening_cut(cq, width: float, depth: float, z_min: float, z_max: floa
     return cq.Workplane("XY").rect(width, depth).extrude(height).translate((0.0, 0.0, z_min))
 
 
-def _card_slot_cut(
-    *,
-    cq,
-    center: float,
-    bottom_width: float,
-    bottom_depth: float,
-    z_min: float,
-    z_max: float,
-):
-    transition_height = 3.0
-    upper_depth = bottom_depth + 6.0
-    upper_z_min = z_min + transition_height
-    cap_radius = 5.0
-    shoulder_z = z_max - cap_radius
-    bottom_left = center - bottom_width / 2.0
-    bottom_right = center + bottom_width / 2.0
-    top_left = bottom_left - cap_radius
-    top_right = bottom_right + cap_radius
-    arc_offset = cap_radius * 0.2929
-    right_arc_midpoint = (bottom_right + arc_offset, z_max - arc_offset)
-    left_arc_midpoint = (bottom_left - arc_offset, z_max - arc_offset)
-    lower = (
-        cq.Workplane("XY")
-        .center(center, 0.0)
-        .rect(bottom_width, bottom_depth)
-        .workplane(offset=transition_height)
-        .rect(bottom_width, upper_depth)
-        .loft()
-        .translate((0.0, 0.0, z_min))
-    )
-    upper_profile = (
-        cq.Workplane("XZ")
-        .moveTo(bottom_left, upper_z_min)
-        .lineTo(bottom_right, upper_z_min)
-        .lineTo(bottom_right, shoulder_z)
-        .threePointArc(right_arc_midpoint, (top_right, z_max))
-        .lineTo(top_left, z_max)
-        .threePointArc(left_arc_midpoint, (bottom_left, shoulder_z))
-        .close()
-    )
-    upper = upper_profile.extrude(upper_depth / 2.0, both=True)
-    return lower.union(upper)
-
-
-def _side_dovetail_track_cuts(
+def _front_dovetail_track_cuts(
     *,
     cq,
     outer_width: float,
+    outer_depth: float,
     wall_thickness: float,
     outer_height: float,
     track_z: float,
 ):
     groove_bottom_z = track_z - 0.5
-    groove_outer_y = 31.294306
-    groove_inner_y = 29.0
+    groove_inner_x = outer_width / 2.0 - wall_thickness
+    groove_outer_x = outer_width / 2.0 - 1.705694
     positive_profile = [
-        (groove_inner_y, groove_bottom_z),
-        (29.007, groove_bottom_z + 0.077),
-        (29.03, groove_bottom_z + 0.171),
-        (29.067, groove_bottom_z + 0.25),
-        (29.117, groove_bottom_z + 0.322),
-        (29.179, groove_bottom_z + 0.383),
-        (29.25, groove_bottom_z + 0.433),
-        (29.329, groove_bottom_z + 0.47),
-        (29.414, groove_bottom_z + 0.493),
-        (29.5, track_z),
-        (groove_outer_y, track_z),
-        (groove_inner_y, outer_height),
+        (groove_inner_x, groove_bottom_z),
+        (groove_inner_x + 0.007, groove_bottom_z + 0.077),
+        (groove_inner_x + 0.03, groove_bottom_z + 0.171),
+        (groove_inner_x + 0.067, groove_bottom_z + 0.25),
+        (groove_inner_x + 0.117, groove_bottom_z + 0.322),
+        (groove_inner_x + 0.179, groove_bottom_z + 0.383),
+        (groove_inner_x + 0.25, groove_bottom_z + 0.433),
+        (groove_inner_x + 0.329, groove_bottom_z + 0.47),
+        (groove_inner_x + 0.414, groove_bottom_z + 0.493),
+        (groove_inner_x + 0.5, track_z),
+        (groove_outer_x, track_z),
+        (groove_inner_x, outer_height),
     ]
-    negative_profile = [(-y, z) for y, z in positive_profile]
-    track_length = outer_width - wall_thickness
-    track_center_x = wall_thickness / 2.0
+    negative_profile = [(-x, z) for x, z in positive_profile]
+    track_length = outer_depth - wall_thickness
+    track_center_y = -wall_thickness / 2.0
     positive_cut = (
-        cq.Workplane("YZ")
+        cq.Workplane("XZ")
         .polyline(positive_profile)
         .close()
         .extrude(track_length / 2.0, both=True)
-        .translate((track_center_x, 0.0, 0.0))
+        .translate((0.0, track_center_y, 0.0))
     )
     negative_cut = (
-        cq.Workplane("YZ")
+        cq.Workplane("XZ")
         .polyline(negative_profile)
         .close()
         .extrude(track_length / 2.0, both=True)
-        .translate((track_center_x, 0.0, 0.0))
+        .translate((0.0, track_center_y, 0.0))
     )
     return positive_cut.union(negative_cut)
 
 
-def _right_lid_track_cut(
+def _front_lid_track_cut(
     *,
     cq,
     outer_width: float,
     outer_depth: float,
+    wall_thickness: float,
     outer_height: float,
     track_z: float,
 ):
-    cut_width = 6.72
-    cut_depth = outer_depth - 7.0
+    cut_width = outer_width - (2.0 * wall_thickness - 1.0)
+    cut_depth = wall_thickness + 2.72
     cut_height = outer_height - track_z + 0.5
     return (
         cq.Workplane("XY")
         .box(cut_width, cut_depth, cut_height)
-        .translate((outer_width / 2.0 - 2.0, 0.0, track_z + cut_height / 2.0))
+        .translate(
+            (
+                0.0,
+                -outer_depth / 2.0 + wall_thickness / 2.0,
+                track_z + cut_height / 2.0,
+            )
+        )
     )
 
 
-def _top_click_features(*, cq, outer_width: float, outer_depth: float, track_z: float):
-    track_center_x = outer_width / 2.0 - 2.0
-    frame_outer_depth = outer_depth - 3.411388
-    frame_inner_depth = outer_depth - 7.0
-    side_strip_depth = (frame_outer_depth - frame_inner_depth) / 2.0
-    side_strip_center_offset = frame_inner_depth / 2.0 + side_strip_depth / 2.0
+def _top_click_features(
+    *,
+    cq,
+    outer_width: float,
+    outer_depth: float,
+    wall_thickness: float,
+    track_z: float,
+):
+    track_center_y = -outer_depth / 2.0 + wall_thickness / 2.0
+    frame_outer_width = outer_width - 3.411388
+    frame_inner_width = outer_width - (2.0 * wall_thickness - 1.0)
+    side_strip_width = (frame_outer_width - frame_inner_width) / 2.0
+    side_strip_center_offset = frame_inner_width / 2.0 + side_strip_width / 2.0
     positive_side_strip = (
         cq.Workplane("XY")
-        .box(outer_width, side_strip_depth, 0.2)
-        .translate((0.0, side_strip_center_offset, track_z - 0.1))
+        .box(side_strip_width, outer_depth, 0.2)
+        .translate((side_strip_center_offset, 0.0, track_z - 0.1))
     )
     negative_side_strip = (
         cq.Workplane("XY")
-        .box(outer_width, side_strip_depth, 0.2)
-        .translate((0.0, -side_strip_center_offset, track_z - 0.1))
+        .box(side_strip_width, outer_depth, 0.2)
+        .translate((-side_strip_center_offset, 0.0, track_z - 0.1))
     )
     track_floor = positive_side_strip.union(negative_side_strip)
 
     lug = (
         cq.Workplane("XY", origin=(0.0, 0.0, track_z))
-        .center(track_center_x, 0.0)
-        .slot2D(10.0, 2.0, angle=90.0)
+        .center(0.0, track_center_y)
+        .slot2D(10.0, 2.0)
         .extrude(0.6)
     )
     try:

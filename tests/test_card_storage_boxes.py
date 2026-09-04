@@ -31,8 +31,8 @@ class CardStorageBoxTopologyTests(unittest.TestCase):
 
     def test_default_part_envelopes_remain_stable(self) -> None:
         expected_envelopes = {
-            ("dutch_blitz", "container"): (123.0, 66.0, 92.0),
-            ("dutch_blitz", "lid"): (118.8, 61.820216, 3.076608),
+            ("dutch_blitz", "container"): (63.2, 66.4, 91.076608),
+            ("dutch_blitz", "lid"): (59.0, 62.220216, 3.076608),
             ("five_crowns", "container"): (98.362904, 64.0, 48.0),
             ("five_crowns", "lid"): (95.362904, 61.820216, 5.53),
             ("monopoly_deal", "container"): (98.362904, 64.0, 41.0),
@@ -44,6 +44,43 @@ class CardStorageBoxTopologyTests(unittest.TestCase):
                 actual = (bounding_box.xlen, bounding_box.ylen, bounding_box.zlen)
                 for actual_extent, expected_extent in zip(actual, expected, strict=True):
                     self.assertAlmostEqual(actual_extent, expected_extent, places=5)
+
+    def test_dutch_blitz_defaults_use_card_holder_insert_measurements(self) -> None:
+        self.assertEqual(dutch_blitz_storage_box.PARAMETERS["card_length"], 82.0)
+        self.assertEqual(dutch_blitz_storage_box.PARAMETERS["card_width"], 58.4)
+        self.assertEqual(dutch_blitz_storage_box.PARAMETERS["deck_thickness"], 12.6)
+        self.assertEqual(dutch_blitz_storage_box.PARAMETERS["divider_count"], 4)
+        self.assertLess(
+            63.2 * 66.4 * 91.076608,
+            0.55 * (123.0 * 66.0 * 92.0),
+        )
+
+    def test_dutch_blitz_lid_handle_sits_below_the_logo(self) -> None:
+        plain_lid = dutch_blitz_storage_box.build(
+            part="lid", logo_depth=0, handle_slot=False, click_feature=False
+        )["lid"]
+        notched_lid = dutch_blitz_storage_box.build(
+            part="lid", logo_depth=0, handle_slot=True, click_feature=False
+        )["lid"]
+        handle_cut = plain_lid.cut(notched_lid)
+        bounding_box = handle_cut.val().BoundingBox()
+
+        self.assertAlmostEqual(bounding_box.xmin, -12.5)
+        self.assertAlmostEqual(bounding_box.xmax, 12.5)
+        self.assertLess(bounding_box.ymax, 0.0)
+
+    def test_dutch_blitz_lid_slides_and_locks_from_the_front(self) -> None:
+        container = self.results["dutch_blitz"]["container"]
+        lid = self.results["dutch_blitz"]["lid"]
+        lid_z = 88.0
+        locked_lid = lid.translate((0.0, -2.089892, lid_z))
+        sliding_lid = lid.translate((0.0, -15.0, lid_z))
+
+        self.assertEqual(len(container.intersect(locked_lid).solids().vals()), 0)
+        click_overlap = sum(
+            solid.Volume() for solid in container.intersect(sliding_lid).solids().vals()
+        )
+        self.assertGreater(click_overlap, 0.0)
 
     def test_logo_optional_lids_remain_valid(self) -> None:
         for module in (five_crowns_storage_box, monopoly_deal_storage_box):
