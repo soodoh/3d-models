@@ -6,6 +6,7 @@ import unittest
 
 from print_models.catalog import load_models
 from print_models.models.gridfinity_silverware_set import (
+    MINIMUM_DECK_RING_MM,
     PARAMETERS,
     _build_profiled_knife_slot,
     _build_utensil_cutter,
@@ -315,6 +316,26 @@ class SilverwareSetGeometryTests(unittest.TestCase):
         )
         for center_x in rib_centers:
             self.assertTrue(front.isInside(cq.Vector(center_x, former_trough_center_y, 37.0), 1e-6))
+
+    def test_steak_knife_slots_span_usable_width_evenly(self) -> None:
+        import cadquery as cq
+
+        front = self.shapes["steak_knife_module_front"]
+        maximum_slot_width = 15.808 + 2.0 * PARAMETERS["knife_slot_clearance_mm"]
+        inner_half_width = front.BoundingBox().xlen / 2.0 - PARAMETERS["wall_thickness_mm"]
+        outer_center_x = inner_half_width - MINIMUM_DECK_RING_MM - maximum_slot_width / 2.0
+        slot_pitch = 2.0 * outer_center_x / (PARAMETERS["steak_knife_count"] - 1)
+        slot_centers = tuple(
+            -outer_center_x + index * slot_pitch for index in range(PARAMETERS["steak_knife_count"])
+        )
+
+        for center_x in slot_centers:
+            with self.subTest(center_x=center_x):
+                self.assertFalse(front.isInside(cq.Vector(center_x, -90.0, 38.5), 1e-6))
+
+        for left_center, right_center in zip(slot_centers[:-1], slot_centers[1:], strict=True):
+            rib_center_x = (left_center + right_center) / 2.0
+            self.assertTrue(front.isInside(cq.Vector(rib_center_x, -90.0, 38.5), 1e-6))
 
     def test_steak_knife_cutter_follows_calibrated_full_profile(self) -> None:
         import cadquery as cq

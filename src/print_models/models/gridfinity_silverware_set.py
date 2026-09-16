@@ -93,9 +93,10 @@ PRINT_NOTES = (
     "uses a 15.2 mm main handle, a smooth transition through an 11 mm waist, and an 18 mm upper "
     "edge bulb with approximately 16 mm width and 12 mm long parallel sides before it curves "
     "inward to the 6 mm blade entry. Both knife modules add 0.5 mm clearance per slot side "
-    "and tilt the handles upward by 3 degrees for pickup. Each 6U module is split at 3U into front "
-    "and back STL parts; place matching pairs together on adjacent Gridfinity cells and print with "
-    "the bases down."
+    "and tilt the handles upward by 3 degrees for pickup. The steak-knife slots span the usable "
+    "width evenly, with the outer slots against the left and right deck margins. Each 6U module is "
+    "split at 3U into front and back STL parts; place matching pairs together on adjacent "
+    "Gridfinity cells and print with the bases down."
 )
 
 GRIDFINITY_HEIGHT_UNIT_MM = 7.0
@@ -517,6 +518,7 @@ def build(
         knife_handle_lift_angle_degrees=knife_handle_lift_angle_degrees,
         wall_thickness_mm=wall_thickness_mm,
         section_profile=steak_knife_slot_profile,
+        spread_slots_across_width=True,
     )
 
     parts = {}
@@ -883,6 +885,7 @@ def _build_knife_module(
     knife_handle_lift_angle_degrees: float,
     wall_thickness_mm: float,
     section_profile: Sequence[tuple[float, float, float]] | None = None,
+    spread_slots_across_width: bool = False,
 ):
     from cqgridfinity import GR_BASE_HEIGHT, GR_FLOOR
 
@@ -909,7 +912,7 @@ def _build_knife_module(
         maximum_edge_depth_mm = max(section[2] for section in section_profile)
 
     maximum_slot_width = maximum_thickness_mm + 2.0 * knife_slot_clearance_mm
-    slot_pitch = maximum_slot_width + knife_rib_mm
+    minimum_slot_pitch = maximum_slot_width + knife_rib_mm
     slots_width = knife_count * maximum_slot_width + (knife_count - 1) * knife_rib_mm
     if slots_width + 2.0 * MINIMUM_DECK_RING_MM > inner_x_max - inner_x_min:
         raise ValueError("The knife slots do not leave a safe deck ring in the selected width.")
@@ -923,7 +926,13 @@ def _build_knife_module(
         floor_top_z=floor_top_z,
         pocket_depth_mm=maximum_slot_depth,
     )
-    first_center_x = -(knife_count - 1) * slot_pitch / 2.0
+    if spread_slots_across_width and knife_count > 1:
+        first_center_x = inner_x_min + MINIMUM_DECK_RING_MM + maximum_slot_width / 2.0
+        last_center_x = inner_x_max - MINIMUM_DECK_RING_MM - maximum_slot_width / 2.0
+        slot_pitch = (last_center_x - first_center_x) / (knife_count - 1)
+    else:
+        slot_pitch = minimum_slot_pitch
+        first_center_x = -(knife_count - 1) * slot_pitch / 2.0
     handle_start_y = -knife_length_mm / 2.0 - knife_slot_clearance_mm
     transition_y = -knife_length_mm / 2.0 + knife_handle_length_mm
     blade_tip_y = knife_length_mm / 2.0
