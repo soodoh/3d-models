@@ -38,7 +38,10 @@ class TeaspoonGeometryTests(unittest.TestCase):
         self.assertEqual(len(self.part.shells().vals()), 1)
         self.assertAlmostEqual(bounds.xlen, 41.5, places=3)
         self.assertAlmostEqual(bounds.ylen, 167.5, places=3)
-        self.assertAlmostEqual(bounds.zlen, 45.8, places=3)
+        self.assertAlmostEqual(bounds.zlen, 42.0, places=3)
+
+    def test_side_walls_are_flush_with_the_cutout_infill(self) -> None:
+        self.assertAlmostEqual(self.shape.BoundingBox().zmax, 42.0, places=3)
 
     def test_profile_uses_measured_handle_and_bowl_widths(self) -> None:
         profile = dict(

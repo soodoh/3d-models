@@ -8,6 +8,7 @@ from print_models.catalog import load_models
 from print_models.models.gridfinity_silverware_set import (
     MINIMUM_DECK_RING_MM,
     PARAMETERS,
+    STACKING_LIP_ENABLED,
     _build_profiled_knife_slot,
     _build_utensil_cutter,
     _extend_steak_knife_profile_middle,
@@ -86,6 +87,7 @@ class SilverwareSetGeometryTests(unittest.TestCase):
         self.assertEqual(PARAMETERS["steak_knife_handle_edge_bulb_peak_offset_mm"], 9.0)
         self.assertEqual(PARAMETERS["steak_knife_handle_edge_bulb_flat_length_mm"], 12.0)
         self.assertEqual(PARAMETERS["steak_knife_slot_middle_extension_mm"], 4.0)
+        self.assertFalse(STACKING_LIP_ENABLED)
 
     def test_build_returns_eight_named_printable_halves(self) -> None:
         self.assertEqual(
@@ -116,7 +118,13 @@ class SilverwareSetGeometryTests(unittest.TestCase):
                 bounds = self.shapes[f"{module_name}_{half_name}"].BoundingBox()
                 self.assertAlmostEqual(bounds.xlen, expected_width, places=3)
                 self.assertAlmostEqual(bounds.ylen, 125.75, places=3)
-                self.assertAlmostEqual(bounds.zlen, 45.8, places=3)
+                self.assertAlmostEqual(bounds.zlen, 42.0, places=3)
+
+    def test_all_halves_have_side_walls_flush_with_the_cutout_infill(self) -> None:
+        for part_name, shape in self.shapes.items():
+            bounds = shape.BoundingBox()
+            with self.subTest(part_name=part_name):
+                self.assertAlmostEqual(bounds.zmax, 42.0, places=3)
 
     def test_fork_heads_keep_maximum_depth_with_two_millimeter_floors(self) -> None:
         import cadquery as cq

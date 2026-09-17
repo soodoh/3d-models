@@ -1,4 +1,4 @@
-"""Split Gridfinity cutout modules for a Cambridge Beacon place setting and steak knives."""
+"""Split lipless Gridfinity modules for a Cambridge Beacon place setting and steak knives."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from print_models.models.gridfinity_box import (
 
 NAME = "gridfinity_silverware_set"
 DESCRIPTION = (
-    "Split fitted Gridfinity modules for eight Cambridge Beacon salad forks, dinner forks, "
+    "Split fitted lipless Gridfinity modules for eight Cambridge Beacon salad forks, dinner forks, "
     "teaspoons, dinner spoons, dinner knives, and full-profile steak knives."
 )
 PARAMETERS = {
@@ -100,10 +100,12 @@ PRINT_NOTES = (
     "and tilt the handles upward by 3 degrees for pickup. The steak-knife slots span the usable "
     "width evenly, with the outer slots against the left and right deck margins. Each 6U module is "
     "split at 3U into front and back STL parts; place matching pairs together on adjacent "
-    "Gridfinity cells and print with the bases down."
+    "Gridfinity cells and print with the bases down. All modules omit the stacking lip and trim "
+    "the side walls flush with the cutout infill."
 )
 
 GRIDFINITY_HEIGHT_UNIT_MM = 7.0
+STACKING_LIP_ENABLED = False
 MINIMUM_CAVITY_FLOOR_MM = 2.0
 MINIMUM_DECK_RING_MM = 2.0
 BOOLEAN_OVERLAP_MM = 0.2
@@ -1107,7 +1109,7 @@ def _build_profiled_knife_slot(
 def _render_empty_module(
     *, unit_width: int, unit_depth: int, unit_height: int, wall_thickness_mm: float
 ):
-    return FractionalDividerGridfinityBox(
+    box = FractionalDividerGridfinityBox(
         unit_width=unit_width,
         unit_depth=unit_depth,
         unit_height=unit_height,
@@ -1116,8 +1118,19 @@ def _render_empty_module(
         wall_thickness_mm=wall_thickness_mm,
         divider_thickness_mm=1.2,
         scoops=False,
-        lip_enabled=True,
+        lip_enabled=STACKING_LIP_ENABLED,
     ).render()
+    bounds = box.val().BoundingBox()
+    deck_top_z = unit_height * GRIDFINITY_HEIGHT_UNIT_MM
+    wall_crop = _build_block(
+        x_min=bounds.xmin - BOOLEAN_OVERLAP_MM,
+        x_max=bounds.xmax + BOOLEAN_OVERLAP_MM,
+        y_min=bounds.ymin - BOOLEAN_OVERLAP_MM,
+        y_max=bounds.ymax + BOOLEAN_OVERLAP_MM,
+        z_min=bounds.zmin - BOOLEAN_OVERLAP_MM,
+        z_max=deck_top_z,
+    )
+    return box.intersect(wall_crop).clean()
 
 
 def _utensil_outline_points(
