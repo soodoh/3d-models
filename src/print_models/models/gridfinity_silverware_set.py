@@ -47,6 +47,8 @@ PARAMETERS = {
     "knife_blade_length_mm": 111.0,
     "knife_blade_width_mm": 19.0,
     "knife_blade_thickness_mm": 2.0,
+    "knife_blade_transition_length_mm": 10.0,
+    "knife_blade_transition_extra_width_mm": 1.0,
     "knife_handle_width_mm": 14.0,
     "knife_handle_thickness_mm": 7.5,
     "steak_knife_count": 8,
@@ -86,8 +88,10 @@ PARAMETERS = {
 PRINT_NOTES = (
     "The fork and spoon modules store each group of eight in fitted silhouette pockets with a "
     "2 mm floor, tapered lead-ins, lifted handles, and a shared wall-to-wall grab bay. The dinner "
-    "knife module stores eight knives side by side, blade-edge down, in stepped slots. The 4U "
-    "steak-knife module adds eight individually fitted edge-down slots traced from calibrated "
+    "knife module stores eight knives side by side, blade-edge down, in stepped slots. Its blade "
+    "cutouts taper over the first 10 mm beyond each handle, starting 1 mm wider than the regular "
+    "blade slots. The 4U steak-knife module adds eight individually fitted edge-down slots traced "
+    "from calibrated "
     "broadside and edge-on photos. Its 222 mm profiles use the measured 106 mm handle and 116 mm "
     "blade, including the 27.5/21/16.5/24 mm broadside transitions. The annotated edge profile "
     "uses a 15.2 mm main handle, a smooth transition through an 11 mm waist, and an 18 mm upper "
@@ -275,6 +279,8 @@ def build(
     knife_blade_length_mm: float = 111.0,
     knife_blade_width_mm: float = 19.0,
     knife_blade_thickness_mm: float = 2.0,
+    knife_blade_transition_length_mm: float = 10.0,
+    knife_blade_transition_extra_width_mm: float = 1.0,
     knife_handle_width_mm: float = 14.0,
     knife_handle_thickness_mm: float = 7.5,
     steak_knife_count: int = 8,
@@ -344,6 +350,8 @@ def build(
         knife_blade_length_mm=knife_blade_length_mm,
         knife_blade_width_mm=knife_blade_width_mm,
         knife_blade_thickness_mm=knife_blade_thickness_mm,
+        knife_blade_transition_length_mm=knife_blade_transition_length_mm,
+        knife_blade_transition_extra_width_mm=knife_blade_transition_extra_width_mm,
         knife_handle_width_mm=knife_handle_width_mm,
         knife_handle_thickness_mm=knife_handle_thickness_mm,
         steak_knife_count=steak_knife_count,
@@ -473,6 +481,8 @@ def build(
         knife_rib_mm=knife_rib_mm,
         knife_handle_lift_angle_degrees=knife_handle_lift_angle_degrees,
         wall_thickness_mm=wall_thickness_mm,
+        blade_transition_length_mm=knife_blade_transition_length_mm,
+        blade_transition_extra_width_mm=knife_blade_transition_extra_width_mm,
     )
     steak_knife_physical_profile = _steak_knife_section_profile(
         knife_length_mm=steak_knife_length_mm,
@@ -886,6 +896,8 @@ def _build_knife_module(
     wall_thickness_mm: float,
     section_profile: Sequence[tuple[float, float, float]] | None = None,
     spread_slots_across_width: bool = False,
+    blade_transition_length_mm: float = 0.0,
+    blade_transition_extra_width_mm: float = 0.0,
 ):
     from cqgridfinity import GR_BASE_HEIGHT, GR_FLOOR
 
@@ -904,7 +916,10 @@ def _build_knife_module(
     inner_y_max = bounds.ymax - wall_thickness_mm
 
     if section_profile is None:
-        maximum_thickness_mm = knife_handle_thickness_mm
+        maximum_thickness_mm = max(
+            knife_handle_thickness_mm,
+            knife_blade_thickness_mm + blade_transition_extra_width_mm,
+        )
         maximum_edge_depth_mm = max(knife_handle_width_mm, knife_blade_width_mm)
     else:
         _validate_knife_section_profile(section_profile, knife_length_mm=knife_length_mm)
@@ -972,7 +987,27 @@ def _build_knife_module(
                 round_start=False,
                 round_end=True,
             )
-            slot = handle.union(blade)
+            blade_transition = _build_profiled_knife_slot(
+                center_x=center_x,
+                start_y=transition_y,
+                deck_top_z=deck_top_z,
+                knife_length_mm=blade_transition_length_mm,
+                section_profile=(
+                    (
+                        0.0,
+                        knife_blade_thickness_mm + blade_transition_extra_width_mm,
+                        knife_blade_width_mm,
+                    ),
+                    (
+                        blade_transition_length_mm,
+                        knife_blade_thickness_mm,
+                        knife_blade_width_mm,
+                    ),
+                ),
+                lateral_clearance_mm=knife_slot_clearance_mm,
+                vertical_clearance_mm=vertical_clearance_mm,
+            )
+            slot = handle.union(blade).union(blade_transition)
         else:
             slot = _build_profiled_knife_slot(
                 center_x=center_x,
@@ -1459,6 +1494,7 @@ def _validate_parameters(**parameters) -> None:
         "fit_clearance_mm",
         "vertical_clearance_mm",
         "knife_slot_clearance_mm",
+        "knife_blade_transition_extra_width_mm",
         "knife_handle_lift_angle_degrees",
     )
     for name, value in parameters.items():
@@ -1475,6 +1511,8 @@ def _validate_parameters(**parameters) -> None:
             raise ValueError(f"{name} must not be negative.")
     if parameters["knife_handle_lift_angle_degrees"] >= 90.0:
         raise ValueError("knife_handle_lift_angle_degrees must be less than 90 degrees.")
+    if parameters["knife_blade_transition_length_mm"] > parameters["knife_blade_length_mm"]:
+        raise ValueError("knife_blade_transition_length_mm must not exceed knife_blade_length_mm.")
 
     unit_depth = parameters["unit_depth"]
     split_depth_u = parameters["split_depth_u"]

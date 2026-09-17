@@ -61,6 +61,8 @@ class SilverwareSetGeometryTests(unittest.TestCase):
         self.assertEqual(PARAMETERS["knife_length_mm"], 236.0)
         self.assertEqual(PARAMETERS["knife_handle_length_mm"], 125.0)
         self.assertEqual(PARAMETERS["knife_blade_length_mm"], 111.0)
+        self.assertEqual(PARAMETERS["knife_blade_transition_length_mm"], 10.0)
+        self.assertEqual(PARAMETERS["knife_blade_transition_extra_width_mm"], 1.0)
         self.assertEqual(PARAMETERS["knife_handle_lift_angle_degrees"], 3.0)
         self.assertFalse(any(name.startswith("knife_lift_trough_") for name in PARAMETERS))
         self.assertEqual(PARAMETERS["steak_knife_unit_width"], 4)
@@ -287,8 +289,10 @@ class SilverwareSetGeometryTests(unittest.TestCase):
             self.assertTrue(back.isInside(cq.Vector(center_x, 60.0, 24.75), 1e-6))
             self.assertFalse(back.isInside(cq.Vector(center_x + 4.1, 7.0, 35.0), 1e-6))
             self.assertTrue(back.isInside(cq.Vector(center_x + 4.4, 7.0, 35.0), 1e-6))
-            self.assertFalse(back.isInside(cq.Vector(center_x + 1.4, 8.0, 35.0), 1e-6))
-            self.assertTrue(back.isInside(cq.Vector(center_x + 1.6, 8.0, 35.0), 1e-6))
+            self.assertFalse(back.isInside(cq.Vector(center_x + 1.9, 8.0, 35.0), 1e-6))
+            self.assertTrue(back.isInside(cq.Vector(center_x + 2.1, 8.0, 35.0), 1e-6))
+            self.assertFalse(back.isInside(cq.Vector(center_x + 1.4, 17.0, 35.0), 1e-6))
+            self.assertTrue(back.isInside(cq.Vector(center_x + 1.6, 17.0, 35.0), 1e-6))
 
         rib_center_x = (slot_centers[0] + slot_centers[1]) / 2.0
         self.assertTrue(front.isInside(cq.Vector(rib_center_x, -90.0, 25.0), 1e-6))
@@ -441,6 +445,12 @@ class SilverwareSetGeometryTests(unittest.TestCase):
             build(steak_knife_handle_neck_length_mm=95.0)
         with self.assertRaisesRegex(ValueError, "flat must fit"):
             build(steak_knife_handle_edge_bulb_flat_length_mm=18.0)
+
+    def test_rejects_invalid_knife_blade_transition(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must not be negative"):
+            build(knife_blade_transition_extra_width_mm=-0.1)
+        with self.assertRaisesRegex(ValueError, "must not exceed"):
+            build(knife_blade_transition_length_mm=112.0)
 
     def test_rejects_invalid_knife_handle_lift_angles(self) -> None:
         with self.assertRaisesRegex(ValueError, "must not be negative"):
