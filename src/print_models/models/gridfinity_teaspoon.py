@@ -1,4 +1,4 @@
-"""Compact fitted lipless Gridfinity storage for four nested small teaspoons."""
+"""Compact fitted Gridfinity storage for four nested small teaspoons."""
 
 from __future__ import annotations
 
@@ -6,8 +6,7 @@ from print_models.models.gridfinity_silverware_set import _build_stacked_utensil
 
 NAME = "gridfinity_teaspoon"
 DESCRIPTION = (
-    "A compact lipless 1x4 Gridfinity box with one photo-traced pocket for four nested small "
-    "teaspoons "
+    "A compact 1x4 Gridfinity box with one photo-traced pocket for four nested small teaspoons "
     "and a wall-to-wall stadium finger bay."
 )
 PARAMETERS = {
@@ -38,9 +37,11 @@ PRINT_NOTES = (
     "from the calibrated overhead photo and adds 1 mm clearance per side plus an 8 mm-deep "
     "tapered lead-in. The pocket has a flat 2 mm floor so the uneven stack rests in its measured "
     "natural posture; its 29 mm handle-end height sets the required 6U box height. A 30 mm-long "
-    "wall-to-wall stadium bay crosses the lower handle for finger access. The box omits the "
-    "stacking lip and trims the side walls flush with the cutout infill. Print base-down."
+    "wall-to-wall stadium bay crosses the lower handle for finger access. The box retains its "
+    "stackable lip. Print base-down."
 )
+
+STACKING_LIP_ENABLED = True
 
 # Width samples combine the supplied handle measurements with the calibrated overhead silhouette.
 # Fractions run from the handle tip (0.0) to the bowl tip (1.0); widths are physical millimeters.
@@ -170,6 +171,7 @@ def build(
         lead_in_depth_mm=lead_in_depth_mm,
         handle_lift_mm=0.0,
         wall_thickness_mm=wall_thickness_mm,
+        stacking_lip_enabled=STACKING_LIP_ENABLED,
     )
 
 

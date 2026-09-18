@@ -598,6 +598,7 @@ def _build_stacked_utensil_module(
     handle_lift_mm: float,
     wall_thickness_mm: float,
     cavity_offsets_mm: Sequence[tuple[float, float]] | None = None,
+    stacking_lip_enabled: bool = STACKING_LIP_ENABLED,
 ):
     from cqgridfinity import GR_BASE_HEIGHT, GR_FLOOR
 
@@ -606,6 +607,7 @@ def _build_stacked_utensil_module(
         unit_depth=unit_depth,
         unit_height=unit_height,
         wall_thickness_mm=wall_thickness_mm,
+        stacking_lip_enabled=stacking_lip_enabled,
     )
     bounds = box.val().BoundingBox()
     floor_top_z = GR_BASE_HEIGHT + GR_FLOOR
@@ -1107,7 +1109,12 @@ def _build_profiled_knife_slot(
 
 
 def _render_empty_module(
-    *, unit_width: int, unit_depth: int, unit_height: int, wall_thickness_mm: float
+    *,
+    unit_width: int,
+    unit_depth: int,
+    unit_height: int,
+    wall_thickness_mm: float,
+    stacking_lip_enabled: bool = STACKING_LIP_ENABLED,
 ):
     box = FractionalDividerGridfinityBox(
         unit_width=unit_width,
@@ -1118,8 +1125,11 @@ def _render_empty_module(
         wall_thickness_mm=wall_thickness_mm,
         divider_thickness_mm=1.2,
         scoops=False,
-        lip_enabled=STACKING_LIP_ENABLED,
+        lip_enabled=stacking_lip_enabled,
     ).render()
+    if stacking_lip_enabled:
+        return box
+
     bounds = box.val().BoundingBox()
     deck_top_z = unit_height * GRIDFINITY_HEIGHT_UNIT_MM
     wall_crop = _build_block(

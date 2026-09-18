@@ -5,7 +5,12 @@ from __future__ import annotations
 import unittest
 
 from print_models.catalog import load_models
-from print_models.models.gridfinity_teaspoon import PARAMETERS, _teaspoon_width_profile, build
+from print_models.models.gridfinity_teaspoon import (
+    PARAMETERS,
+    STACKING_LIP_ENABLED,
+    _teaspoon_width_profile,
+    build,
+)
 
 
 class TeaspoonGeometryTests(unittest.TestCase):
@@ -29,6 +34,7 @@ class TeaspoonGeometryTests(unittest.TestCase):
         self.assertEqual(PARAMETERS["stack_neck_height_mm"], 14.0)
         self.assertEqual(PARAMETERS["stack_handle_end_height_mm"], 29.0)
         self.assertEqual(PARAMETERS["fit_clearance_mm"], 1.0)
+        self.assertTrue(STACKING_LIP_ENABLED)
 
     def test_build_returns_one_valid_compact_gridfinity_solid(self) -> None:
         bounds = self.shape.BoundingBox()
@@ -38,10 +44,10 @@ class TeaspoonGeometryTests(unittest.TestCase):
         self.assertEqual(len(self.part.shells().vals()), 1)
         self.assertAlmostEqual(bounds.xlen, 41.5, places=3)
         self.assertAlmostEqual(bounds.ylen, 167.5, places=3)
-        self.assertAlmostEqual(bounds.zlen, 42.0, places=3)
+        self.assertAlmostEqual(bounds.zlen, 45.8, places=3)
 
-    def test_side_walls_are_flush_with_the_cutout_infill(self) -> None:
-        self.assertAlmostEqual(self.shape.BoundingBox().zmax, 42.0, places=3)
+    def test_stackable_lip_extends_above_the_cutout_infill(self) -> None:
+        self.assertAlmostEqual(self.shape.BoundingBox().zmax, 45.8, places=3)
 
     def test_profile_uses_measured_handle_and_bowl_widths(self) -> None:
         profile = dict(
